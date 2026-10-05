@@ -18,30 +18,47 @@ export async function GET() {
   let dbStatus = 'healthy';
   const dbEngine = 'PostgreSQL';
   const dbHost = getSanitizedHost(process.env.DATABASE_URL);
+  let isConnected = false;
+  let tablesProvisioned = false;
   let dbDiagnostic: string | null = null;
   let activePricingVersion: string | null = null;
   let activeServicesCount = 0;
 
   try {
-    // 1. Verify direct query execution against PostgreSQL
+    // Step 1: Verify direct PostgreSQL socket connection
     await prisma.$queryRaw`SELECT 1 as connected`;
-
-    // 2. Verify schema queries
-    const [version, count] = await Promise.all([
-      prisma.pricingVersion.findFirst({
-        where: { status: 'ACTIVE' },
-        select: { version: true },
-      }),
-      prisma.service.count({ where: { active: true } }),
-    ]);
-
-    activePricingVersion = version?.version || null;
-    activeServicesCount = count;
-  } catch (error: any) {
+    isConnected = true;
+  } catch (connError: any) {
     dbStatus = 'degraded';
-    // Return sanitized error code/summary without exposing credentials or internal tokens
-    dbDiagnostic = error?.code || 'Unable to establish PostgreSQL connection';
-    console.error('[HealthCheck] DB check failed:', error?.message || error);
+    isConnected = false;
+    const msg = connError?.message || '';
+    const cleanMsg = msg
+      .split('\n')
+      .map((s: string) => s.trim())
+      .filter((s: string) => s && !s.startsWith('Invalid `prisma.') && !s.includes('invocation:'))[0] || 'Unable to establish PostgreSQL connection';
+    dbDiagnostic = cleanMsg.replace(/:[^:@\s]+@/, ':***@');
+    console.error('[HealthCheck] DB socket check failed:', connError?.message || connError);
+  }
+
+  if (isConnected) {
+    try {
+      // Step 2: Verify schema tables exist
+      const [version, count] = await Promise.all([
+        prisma.pricingVersion.findFirst({
+          where: { status: 'ACTIVE' },
+          select: { version: true },
+        }),
+        prisma.service.count({ where: { active: true } }),
+      ]);
+      tablesProvisioned = true;
+      activePricingVersion = version?.version || null;
+      activeServicesCount = count;
+    } catch (schemaError: any) {
+      dbStatus = 'degraded';
+      tablesProvisioned = false;
+      dbDiagnostic = 'Database connected, but schema migrations pending. Run `npx prisma migrate deploy`.';
+      console.error('[HealthCheck] DB schema check failed:', schemaError?.message || schemaError);
+    }
   }
 
   const aiStatus = process.env.GEMINI_API_KEY ? 'gemini_configured' : 'heuristic_fallback_active';
@@ -57,7 +74,8 @@ export async function GET() {
           status: dbStatus,
           engine: dbEngine,
           host: dbHost,
-          connected: dbStatus === 'healthy',
+          connected: isConnected,
+          tablesProvisioned,
           ...(dbDiagnostic ? { diagnostic: dbDiagnostic } : {}),
         },
         pricingEngine: {
