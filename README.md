@@ -61,7 +61,7 @@ Dual Export: Client-Safe Proposal vs. Internal Margin Audit Breakdown
 
 - **Framework**: [Next.js 14](https://nextjs.org/) (App Router, Server Actions, TypeScript)
 - **Styling & UI**: [Tailwind CSS](https://tailwindcss.com/) with enterprise B2B palette and tabular financial typography
-- **Database & ORM**: [Prisma ORM](https://www.prisma.io/) (SQLite local / PostgreSQL production ready)
+- **Database & ORM**: [Prisma ORM](https://www.prisma.io/) with managed Supabase PostgreSQL (pooled + direct connection architecture)
 - **AI Engine**: Google Gemini 3.8 Flash via [`@google/genai`](https://www.npmjs.com/package/@google/genai) with resilient deterministic heuristic fallback
 - **Authentication**: Salted scrypt derivation (`crypto.scryptSync`) with timing-safe verification (`crypto.timingSafeEqual`) and database-backed session tokens
 - **Testing**: [Vitest](https://vitest.dev/) with 100% test coverage across pricing and cryptography
@@ -104,18 +104,23 @@ cp .env.example .env
 
 Ensure `.env` contains:
 ```env
-DATABASE_URL="file:./dev.db"
-SESSION_SECRET="your-high-entropy-session-secret"
+# Supabase Transaction-Mode Pooler (Port 6543)
+DATABASE_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+# Supabase Session-Mode / Direct Connection (Port 5432)
+DIRECT_URL="postgresql://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres"
+
+ADMIN_SECRET="your-high-entropy-session-secret"
 GEMINI_API_KEY="your-gemini-api-key" # Optional; offline heuristic fallback active if omitted
 NODE_ENV="development"
 ```
 
-### 2. Database Setup & Seeding
+### 2. Database Setup & Migrations
 ```bash
-# Generate Prisma Client and sync schema
-npm run db:push
+# Generate Prisma Client and deploy migrations
+npx prisma migrate deploy
 
-# Seed development rate card baseline (development only)
+# Seed baseline rate cards (development only)
 npm run db:seed
 ```
 
