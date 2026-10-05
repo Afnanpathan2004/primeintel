@@ -13,6 +13,7 @@ import {
   Clock,
   AlertCircle,
 } from 'lucide-react';
+import { formatCurrency } from '@/lib/currency';
 
 export default function PricingRulesPage() {
   const [data, setData] = useState<any>(null);
@@ -22,6 +23,8 @@ export default function PricingRulesPage() {
   // New Version form
   const [newVersionName, setNewVersionName] = useState('');
   const [newVersionDesc, setNewVersionDesc] = useState('');
+  const [newMaxDiscount, setNewMaxDiscount] = useState('20');
+  const [newCurrency, setNewCurrency] = useState('INR');
   const [creatingVersion, setCreatingVersion] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -115,8 +118,10 @@ export default function PricingRulesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'CREATE_VERSION',
-          version: newVersionName,
-          description: newVersionDesc,
+          version: newVersionName.trim(),
+          description: newVersionDesc.trim(),
+          maxDiscountPercentage: Number(newMaxDiscount) || 20,
+          currency: newCurrency,
         }),
       });
       if (res.ok) {
@@ -143,13 +148,13 @@ export default function PricingRulesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">
       <div className="border-b border-slate-200 pb-5">
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
           Pricing Rules & Multipliers Engine
         </h2>
         <p className="text-xs text-slate-500 mt-1">
-          Configure base catalog rates, multi-cloud adjustments, workload scale factors, and immutable version snapshots.
+          Configure service catalogs, multi-cloud factors, add-on costs, and immutable version snapshots.
         </p>
       </div>
 
@@ -237,7 +242,7 @@ export default function PricingRulesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-600 uppercase mb-1">
-                      Base Fee (INR)
+                      Base Fee ({svc.currency || 'INR'})
                     </label>
                     <input
                       type="number"
@@ -257,7 +262,7 @@ export default function PricingRulesPage() {
 
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-600 uppercase mb-1">
-                      Min Price Floor (INR)
+                      Min Price Floor
                     </label>
                     <input
                       type="number"
@@ -277,7 +282,7 @@ export default function PricingRulesPage() {
 
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-600 uppercase mb-1">
-                      Max Price Ceiling (INR)
+                      Max Price Ceiling
                     </label>
                     <input
                       type="number"
@@ -305,7 +310,7 @@ export default function PricingRulesPage() {
       {activeTab === 'multipliers' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
           <div className="text-xs text-slate-500 mb-2">
-            Multipliers scale the base service effort based on Environment, Workload Scale, Complexity, and Timeline Urgency.
+            Multipliers adjust the baseline effort based on Environment, Scale, Complexity, and Timeline Urgency.
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {data?.multipliers?.map((m: any) => (
@@ -351,11 +356,11 @@ export default function PricingRulesPage() {
         </div>
       )}
 
-      {/* TAB 3: TECHNICAL ADD-ONS */}
+      {/* TAB 3: ADD-ONS */}
       {activeTab === 'addons' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-4">
           <div className="text-xs text-slate-500 mb-2">
-            Configure line-item values for technical features (Fixed INR or Percentage of base).
+            Configure line-item architectural add-ons (Fixed amount or Percentage of base).
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {data?.addOns?.map((addon: any) => (
@@ -372,7 +377,6 @@ export default function PricingRulesPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-slate-400 font-mono">₹</span>
                   <input
                     type="number"
                     value={addon.value}
@@ -401,22 +405,22 @@ export default function PricingRulesPage() {
         </div>
       )}
 
-      {/* TAB 4: VERSION SNAPSHOTS (IMMUTABILITY) */}
+      {/* TAB 4: VERSION SNAPSHOTS */}
       {activeTab === 'versions' && (
         <div className="space-y-6">
           {/* Create Version Snapshot Box */}
           <div className="bg-white rounded-xl border border-blue-200 shadow-sm p-6 space-y-4 bg-gradient-to-r from-blue-50/20 to-transparent">
             <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
               <Shield className="w-4 h-4 text-blue-600" />
-              Create & Activate New Pricing Version Snapshot
+              Publish & Activate Pricing Version Snapshot
             </h3>
             <p className="text-xs text-slate-600">
-              When business rates change, create a new version snapshot (e.g. <span className="font-mono font-bold">2026.11.01</span>). Existing estimates will forever remain linked to their original snapshot!
+              When business rate cards are updated, publish a new version snapshot (e.g. <span className="font-mono font-bold">2026.11.01</span>). Existing estimates remain permanently linked to their historical version snapshot.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Version Identifier (e.g. 2026.11.01) *
+                  Version Tag (e.g. 2026.11.01) *
                 </label>
                 <input
                   type="text"
@@ -424,28 +428,40 @@ export default function PricingRulesPage() {
                   value={newVersionName}
                   onChange={(e) => setNewVersionName(e.target.value)}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 font-mono"
+                  required
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Snapshot Notes & Justification *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Q4 2026 Approved Cloud Rate Card"
+                  value={newVersionDesc}
+                  onChange={(e) => setNewVersionDesc(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300"
                 />
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Snapshot Notes & Justification
+                  Max Discount Policy Cap (%)
                 </label>
                 <input
-                  type="text"
-                  placeholder="e.g. Q4 2026 Cloud Rate Card Revision"
-                  value={newVersionDesc}
-                  onChange={(e) => setNewVersionDesc(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300"
+                  type="number"
+                  value={newMaxDiscount}
+                  onChange={(e) => setNewMaxDiscount(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-300 font-mono"
                 />
               </div>
             </div>
             <button
               onClick={handleCreateVersionSnapshot}
               disabled={creatingVersion || !newVersionName.trim()}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
             >
               {creatingVersion ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <PlusCircle className="w-3.5 h-3.5" />}
-              Create & Activate Version Snapshot
+              Publish & Activate Pricing Version
             </button>
           </div>
 
@@ -454,40 +470,50 @@ export default function PricingRulesPage() {
             <div className="p-4 border-b border-slate-100 font-bold text-xs uppercase text-slate-500">
               Recorded Pricing Versions
             </div>
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold">
-                <tr>
-                  <th className="py-3 px-6">Version</th>
-                  <th className="py-3 px-6">Description</th>
-                  <th className="py-3 px-6">Status</th>
-                  <th className="py-3 px-6">Created Timestamp</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
-                {data?.versions?.map((v: any) => (
-                  <tr key={v.id} className="hover:bg-slate-50/70">
-                    <td className="py-4 px-6 font-mono font-bold text-slate-900">
-                      v{v.version}
-                    </td>
-                    <td className="py-4 px-6 text-slate-600">{v.description}</td>
-                    <td className="py-4 px-6">
-                      {v.isActive ? (
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
-                          Active Model
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
-                          Archived Snapshot
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-slate-500 font-mono text-[11px]">
-                      {new Date(v.createdAt).toLocaleString('en-IN')}
-                    </td>
+            {data?.versions?.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-500">
+                No pricing versions configured yet.
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold">
+                  <tr>
+                    <th className="py-3 px-6">Version</th>
+                    <th className="py-3 px-6">Description</th>
+                    <th className="py-3 px-6">Max Discount Cap</th>
+                    <th className="py-3 px-6">Status</th>
+                    <th className="py-3 px-6">Published Timestamp</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {data?.versions?.map((v: any) => (
+                    <tr key={v.id} className="hover:bg-slate-50/70">
+                      <td className="py-4 px-6 font-mono font-bold text-slate-900">
+                        v{v.version}
+                      </td>
+                      <td className="py-4 px-6 text-slate-600">{v.description}</td>
+                      <td className="py-4 px-6 font-mono text-slate-800">
+                        {v.maxDiscountPercentage || 20}%
+                      </td>
+                      <td className="py-4 px-6">
+                        {v.status === 'ACTIVE' || v.isActive ? (
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+                            Active Model
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
+                            Archived Snapshot
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-slate-500 font-mono text-[11px]">
+                        {new Date(v.createdAt).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}

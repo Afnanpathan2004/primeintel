@@ -2,7 +2,25 @@
 
 ## Relational Schema (Prisma)
 
-### 1. `Service`
+### 1. `User`
+- `id` (String, cuid)
+- `email` (String, unique)
+- `name` (String)
+- `role` (String - "SUPER_ADMIN" | "ADMIN" | "ESTIMATOR" | "VIEWER", default: "ESTIMATOR")
+- `salt` (String - 16-byte random hex salt)
+- `passwordHash` (String - 64-byte scrypt derived key hex)
+- `mustChangePassword` (Boolean, default: false)
+- `active` (Boolean, default: true)
+- `createdAt`, `updatedAt` (DateTime)
+
+### 2. `Session`
+- `id` (String, cuid)
+- `userId` (String, relation to User)
+- `token` (String, unique - 64-byte random hex)
+- `expiresAt` (DateTime)
+- `createdAt` (DateTime)
+
+### 3. `Service`
 - `id` (String, cuid)
 - `key` (String, unique - e.g. "cloud-migration", "devops-cicd")
 - `name` (String - "Cloud Migration")
@@ -11,9 +29,9 @@
 - `minPrice` (Float)
 - `maxPrice` (Float)
 - `active` (Boolean)
-- `createdAt`, `updatedAt`
+- `createdAt`, `updatedAt` (DateTime)
 
-### 2. `PricingMultiplier`
+### 4. `PricingMultiplier`
 - `id` (String, cuid)
 - `category` (String - "environment", "scale", "complexity", "timeline")
 - `code` (String - "aws", "scale_26_50", "high", "urgent")
@@ -22,7 +40,7 @@
 - `description` (String?)
 - `active` (Boolean)
 
-### 3. `AddOn`
+### 5. `AddOn`
 - `id` (String, cuid)
 - `code` (String, unique - "ha", "dr", "terraform", "cicd", "monitoring", "support_24_7")
 - `name` (String)
@@ -31,7 +49,7 @@
 - `value` (Float)
 - `active` (Boolean)
 
-### 4. `MarketBenchmark`
+### 6. `MarketBenchmark`
 - `id` (String, cuid)
 - `serviceKey` (String)
 - `region` (String - "India", "Global", "US")
@@ -44,19 +62,26 @@
 - `scopeDescription` (String)
 - `confidence` (String - "High", "Medium", "Low")
 - `notes` (String?)
+- `status` (String - "VERIFIED" | "DRAFT" | "EXPIRED" | "ARCHIVED", default: "VERIFIED")
 - `active` (Boolean)
 
-### 5. `PricingVersion`
+### 7. `PricingVersion`
 - `id` (String, cuid)
 - `version` (String, unique - e.g. "2026.10.01")
 - `description` (String)
-- `isActive` (Boolean)
+- `status` (String - "ACTIVE" | "DRAFT" | "ARCHIVED", default: "DRAFT")
+- `isActive` (Boolean, default: false)
+- `maxDiscountPercentage` (Float, default: 20.0)
+- `spreadPercentage` (Float, default: 0.15)
+- `currency` (String, default: "INR")
 - `configSnapshot` (String - JSON of all services, multipliers, add-ons at this version)
-- `createdAt`
+- `createdAt` (DateTime)
 
-### 6. `Estimate`
+### 8. `Estimate`
 - `id` (String, cuid)
 - `estimateNumber` (String, unique - e.g. "PC-2026-0001")
+- `revisionNumber` (Int, default: 1)
+- `currency` (String, default: "INR")
 - `customerName` (String)
 - `companyName` (String)
 - `email` (String?)
@@ -65,7 +90,7 @@
 - `structuredRequirement` (String - JSON)
 - `pricingVersionId` (String)
 - `pricingSnapshot` (String - JSON snapshot)
-- `status` (String - "DRAFT", "GENERATED", "REVIEWED", "SENT", "WON", "LOST")
+- `status` (String - "DRAFT" | "CALCULATED" | "REVIEWED" | "APPROVED" | "EXPORTED" | "SENT" | "CLOSED" | "CANCELLED")
 - `calculatedBasePrice` (Float)
 - `calculatedAddOnsTotal` (Float)
 - `calculatedSubtotal` (Float)
@@ -82,16 +107,28 @@
 - `unknowns` (String - JSON array)
 - `calculationBreakdown` (String - JSON)
 - `benchmarkComparison` (String? - JSON)
+- `approvedBy` (String?)
+- `approvedAt` (DateTime?)
 - `createdBy` (String)
-- `createdAt`, `updatedAt`
+- `createdAt`, `updatedAt` (DateTime)
 
-### 7. `AuditLog`
+### 9. `EstimateRevision`
 - `id` (String, cuid)
-- `entityType` (String - "ESTIMATE", "PRICING_RULE", "DISCOUNT")
+- `estimateId` (String, relation to Estimate)
+- `revisionNumber` (Int)
+- `snapshotData` (String - Complete JSON serialized Estimate record prior to edit)
+- `reason` (String?)
+- `changedBy` (String)
+- `createdAt` (DateTime)
+
+### 10. `AuditLog`
+- `id` (String, cuid)
+- `actor` (String)
+- `action` (String - "CREATE", "UPDATE", "STATUS_CHANGE", "DISCOUNT_OVERRIDE", "CONFIG_CHANGE")
+- `entity` (String - "ESTIMATE", "PRICING_VERSION", "BENCHMARK", "USER", "AUTH")
 - `entityId` (String)
-- `action` (String - "CREATE", "UPDATE", "OVERRIDE")
-- `performedBy` (String)
 - `oldValue` (String? - JSON)
 - `newValue` (String? - JSON)
 - `reason` (String?)
+- `metadata` (String? - JSON)
 - `createdAt` (DateTime)

@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'PrimeCore Internal Estimation Engine',
-  description: 'Enterprise AI requirement extraction and deterministic project pricing engine',
+  title: 'PrimeIntel — Internal Project Estimation Engine',
+  description: 'Enterprise AI requirement extraction and deterministic project pricing engine for PrimeCore',
 };
 
 export default function RootLayout({

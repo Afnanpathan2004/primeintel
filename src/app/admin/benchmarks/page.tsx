@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Building,
 } from 'lucide-react';
+import { formatCurrencyRange } from '@/lib/currency';
 
 export default function BenchmarksPage() {
   const [benchmarks, setBenchmarks] = useState<any[]>([]);
@@ -25,7 +26,8 @@ export default function BenchmarksPage() {
   const [sourceName, setSourceName] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [scopeDescription, setScopeDescription] = useState('');
-  const [confidence, setConfidence] = useState('Medium');
+  const [confidence, setConfidence] = useState('High');
+  const [status, setStatus] = useState('VERIFIED');
   const [assumptions, setAssumptions] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -61,11 +63,12 @@ export default function BenchmarksPage() {
           currency,
           lowPrice: Number(lowPrice),
           highPrice: Number(highPrice),
-          sourceName,
-          sourceUrl: sourceUrl || undefined,
-          scopeDescription,
+          sourceName: sourceName.trim(),
+          sourceUrl: sourceUrl.trim() || undefined,
+          scopeDescription: scopeDescription.trim(),
           confidence,
-          assumptions: assumptions || undefined,
+          status,
+          assumptions: assumptions.trim() || undefined,
         }),
       });
       const data = await res.json();
@@ -88,20 +91,20 @@ export default function BenchmarksPage() {
     return (
       <div className="flex items-center justify-center py-24 text-slate-500 text-xs">
         <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-        Loading market benchmarks...
+        Loading verified benchmarks...
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-20">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
             Market Benchmark Repository
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            External industry rate card indexes and comparative consulting bands. Strict provenance required.
+            External market consulting rate card indexes and comparative bands. Strict provenance required.
           </p>
         </div>
 
@@ -110,17 +113,17 @@ export default function BenchmarksPage() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-colors"
         >
           <PlusCircle className="w-4 h-4" />
-          {showForm ? 'Cancel' : 'Add Market Benchmark'}
+          {showForm ? 'Cancel' : 'Add Verified Benchmark'}
         </button>
       </div>
 
-      {/* Strict Provenance Policy Alert (Section 13, 14) */}
+      {/* Strict Provenance Policy Alert */}
       <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs flex items-start gap-3">
         <ShieldAlert className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold">PrimeCore Benchmark Provenance Policy:</span>
+          <span className="font-semibold">PrimeCore Provenance & Integrity Policy:</span>
           <p className="text-blue-900/80 text-[11px] mt-0.5 leading-relaxed">
-            Never fabricate industry data. Every benchmark entry must document its verified source, date retrieved, geographic region, methodology, and scope. If verified data is unavailable for a given niche, the engine reports &ldquo;Benchmark Unavailable&rdquo;.
+            Never fabricate industry standard numbers. Every benchmark must state its verified source, date retrieved, geographic region, methodology, and scope. If no verified benchmark exists for a given scope, the engine reports &ldquo;Benchmark Unavailable&rdquo;.
           </p>
         </div>
       </div>
@@ -131,7 +134,7 @@ export default function BenchmarksPage() {
           onSubmit={handleCreate}
           className="bg-white p-6 rounded-xl border border-blue-200 shadow-md space-y-4 text-xs"
         >
-          <h3 className="font-bold text-sm text-slate-900">Record New Benchmark Observation</h3>
+          <h3 className="font-bold text-sm text-slate-900">Record Verified Market Benchmark</h3>
 
           {errorMsg && <div className="text-red-600 font-medium">{errorMsg}</div>}
 
@@ -163,6 +166,7 @@ export default function BenchmarksPage() {
                 value={region}
                 onChange={(e) => setRegion(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300"
+                required
               />
             </div>
 
@@ -175,16 +179,17 @@ export default function BenchmarksPage() {
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono"
+                required
               />
             </div>
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                Low Price Bound *
+                Lower Bound Price *
               </label>
               <input
                 type="number"
-                placeholder="500000"
+                placeholder="e.g. 500000"
                 value={lowPrice}
                 onChange={(e) => setLowPrice(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono"
@@ -194,11 +199,11 @@ export default function BenchmarksPage() {
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                High Price Bound *
+                Upper Bound Price *
               </label>
               <input
                 type="number"
-                placeholder="700000"
+                placeholder="e.g. 700000"
                 value={highPrice}
                 onChange={(e) => setHighPrice(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 font-mono"
@@ -208,16 +213,17 @@ export default function BenchmarksPage() {
 
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                Data Confidence Tier *
+                Verification Status *
               </label>
               <select
-                value={confidence}
-                onChange={(e) => setConfidence(e.target.value)}
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300"
               >
-                <option value="High">High (Recent formal bids/surveys)</option>
-                <option value="Medium">Medium (Rate card index)</option>
-                <option value="Low">Low (Informal estimate)</option>
+                <option value="VERIFIED">Verified (Participates in calculations)</option>
+                <option value="DRAFT">Draft (Pending review)</option>
+                <option value="EXPIRED">Expired</option>
+                <option value="ARCHIVED">Archived</option>
               </select>
             </div>
           </div>
@@ -225,11 +231,11 @@ export default function BenchmarksPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                Source Name & Organization *
+                Source Organization & Survey Title *
               </label>
               <input
                 type="text"
-                placeholder="e.g. Indian Cloud Consulting Survey 2026"
+                placeholder="e.g. Indian Cloud Consulting Survey"
                 value={sourceName}
                 onChange={(e) => setSourceName(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300"
@@ -285,66 +291,79 @@ export default function BenchmarksPage() {
       )}
 
       {/* Benchmarks List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {benchmarks.map((bm) => (
-          <div
-            key={bm.id}
-            className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 text-xs"
-          >
-            <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
-              <div>
-                <span className="font-mono text-[10px] text-blue-600 font-bold uppercase tracking-wider">
-                  {bm.serviceKey}
-                </span>
-                <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">
-                  ₹{(bm.lowPrice / 100000).toFixed(1)}L – ₹{(bm.highPrice / 100000).toFixed(1)}L
+      {benchmarks.length === 0 ? (
+        <div className="py-20 text-center bg-white rounded-xl border border-slate-200">
+          <BarChart3 className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <div className="font-semibold text-slate-700 text-sm">No verified benchmarks configured</div>
+          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
+            Benchmark comparisons will report &ldquo;Benchmark Unavailable&rdquo; until verified market data is added.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {benchmarks.map((bm) => (
+            <div
+              key={bm.id}
+              className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 text-xs"
+            >
+              <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <span className="font-mono text-[10px] text-blue-600 font-bold uppercase tracking-wider">
+                    {bm.serviceKey}
+                  </span>
+                  <div className="text-xl font-bold font-mono text-slate-900 mt-0.5">
+                    {formatCurrencyRange(bm.lowPrice, bm.highPrice, bm.currency)}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                      bm.status === 'VERIFIED'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    {bm.status}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    {bm.confidence} Confidence
+                  </span>
                 </div>
               </div>
-              <span
-                className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
-                  bm.confidence === 'High'
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : bm.confidence === 'Medium'
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-slate-100 text-slate-700'
-                }`}
-              >
-                {bm.confidence} Confidence
-              </span>
-            </div>
 
-            <div className="space-y-2 text-slate-600">
-              <div>
-                <span className="font-semibold text-slate-800">Scope: </span>
-                <span>{bm.scopeDescription}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-800">Region: </span>
-                <span>{bm.region} ({bm.currency})</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-800">Source: </span>
-                <span>{bm.sourceName}</span>
-                {bm.sourceUrl && (
-                  <a
-                    href={bm.sourceUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 hover:underline inline-flex items-center gap-0.5"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
+              <div className="space-y-2 text-slate-600">
+                <div>
+                  <span className="font-semibold text-slate-800">Scope: </span>
+                  <span>{bm.scopeDescription}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-800">Region: </span>
+                  <span>{bm.region} ({bm.currency})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-800">Source: </span>
+                  <span>{bm.sourceName}</span>
+                  {bm.sourceUrl && (
+                    <a
+                      href={bm.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 hover:underline inline-flex items-center gap-0.5"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+                {bm.assumptions && (
+                  <div className="text-[11px] text-slate-500 italic bg-slate-50 p-2 rounded">
+                    &ldquo;{bm.assumptions}&rdquo;
+                  </div>
                 )}
               </div>
-              {bm.assumptions && (
-                <div className="text-[11px] text-slate-500 italic bg-slate-50 p-2 rounded">
-                  &ldquo;{bm.assumptions}&rdquo;
-                </div>
-              )}
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

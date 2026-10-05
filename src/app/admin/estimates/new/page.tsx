@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Sparkles,
   Calculator,
-  HelpCircle,
   AlertTriangle,
   CheckCircle,
   Shield,
@@ -24,42 +23,22 @@ import {
 } from 'lucide-react';
 import { StructuredRequirement } from '@/lib/ai/types';
 import { PricingCalculationResult } from '@/lib/pricing/types';
-
-const SAMPLE_SCENARIOS = [
-  {
-    title: 'Scenario 1: 40 Servers AWS Migration (Prompt Baseline)',
-    text: 'The customer currently has around 40 servers on-premise and wants to migrate them to AWS. They need high availability, automated backups, disaster recovery, monitoring, Terraform and CI/CD. They want the migration completed within two months.',
-    company: 'AcroPulse Technologies',
-    contact: 'Vikram Sharma',
-    email: 'vikram.s@acropulse.tech',
-  },
-  {
-    title: 'Scenario 2: 70 Physical Servers with 24/7 Support',
-    text: 'We have 70 physical servers and want to move to AWS. Around 20 applications are running on them. We need HA, DR, centralized monitoring and automated deployment. We currently deploy manually and want Terraform and CI/CD. We also need 24/7 support after migration.',
-    company: 'FinTrack Digital',
-    contact: 'Pooja Iyer',
-    email: 'pooja@fintrackdigital.com',
-  },
-  {
-    title: 'Scenario 3: Kubernetes Modernization on EKS',
-    text: 'We are looking to modernize 15 legacy microservices currently running on disparate virtual machines into Amazon EKS. We require Helm charts, CI/CD with GitHub Actions, Prometheus/Grafana observability, and automated DR failover drills. Timeline is urgent (under 4 weeks).',
-    company: 'LogixFlow Logistics',
-    contact: 'Rajesh Mehta',
-    email: 'rmehta@logixflow.in',
-  },
-];
+import { formatCurrency, formatCurrencyRange, formatCompactCurrency } from '@/lib/currency';
 
 export default function NewEstimatePage() {
   const router = useRouter();
 
-  // Form State
-  const [customerName, setCustomerName] = useState('Vikram Sharma');
-  const [companyName, setCompanyName] = useState('AcroPulse Technologies');
-  const [email, setEmail] = useState('vikram.s@acropulse.tech');
-  const [phone, setPhone] = useState('+91 98201 54321');
-  const [rawRequirement, setRawRequirement] = useState(
-    'The customer currently has around 40 servers on-premise and wants to migrate them to AWS. They need high availability, automated backups, disaster recovery, monitoring, Terraform and CI/CD. They want the migration completed within two months.'
-  );
+  // Form State — Starts blank for real customer input (No dummy data)
+  const [customerName, setCustomerName] = useState('');
+  const [companyName, setCompanyName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [rawRequirement, setRawRequirement] = useState('');
+
+  // Active Pricing Verification
+  const [pricingActive, setPricingActive] = useState<boolean | null>(null);
+  const [activeVersionName, setActiveVersionName] = useState<string>('');
+  const [servicesCatalog, setServicesCatalog] = useState<any[]>([]);
 
   // Analysis State
   const [analyzing, setAnalyzing] = useState(false);
@@ -69,18 +48,12 @@ export default function NewEstimatePage() {
   const [serviceKey, setServiceKey] = useState('cloud-migration');
   const [environmentCode, setEnvironmentCode] = useState('aws');
   const [scaleCode, setScaleCode] = useState('26_50');
-  const [complexityCode, setComplexityCode] = useState('high');
+  const [complexityCode, setComplexityCode] = useState('medium');
   const [timelineCode, setTimelineCode] = useState('standard');
-  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([
-    'ha',
-    'dr',
-    'terraform',
-    'cicd',
-    'monitoring',
-  ]);
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
 
   // Pricing State
-  const [discountPercent, setDiscountPercent] = useState<number>(10);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [adminOverridePrice, setAdminOverridePrice] = useState<string>('');
   const [overrideReason, setOverrideReason] = useState<string>('');
   const [internalNotes, setInternalNotes] = useState<string>('');
@@ -90,21 +63,32 @@ export default function NewEstimatePage() {
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Handle Scenario Quick Fill
-  const loadScenario = (sc: typeof SAMPLE_SCENARIOS[0]) => {
-    setRawRequirement(sc.text);
-    setCompanyName(sc.company);
-    setCustomerName(sc.contact);
-    setEmail(sc.email);
-    setAnalysisResult(null);
-    setCalculationResult(null);
-    setErrorMsg(null);
-  };
+  useEffect(() => {
+    // Check if system has active pricing version and services catalog
+    async function checkPricingStatus() {
+      try {
+        const res = await fetch('/api/pricing');
+        const json = await res.json();
+        if (json.success) {
+          const active = json.data.versions?.find((v: any) => v.status === 'ACTIVE' || v.isActive);
+          setPricingActive(!!active);
+          setActiveVersionName(active?.version || '');
+          setServicesCatalog(json.data.services || []);
+          if (json.data.services?.length > 0) {
+            setServiceKey(json.data.services[0].key);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    checkPricingStatus();
+  }, []);
 
   // Step 1: AI Requirement Analysis
   const handleAnalyze = async () => {
     if (!rawRequirement.trim()) {
-      setErrorMsg('Please paste a customer requirement first.');
+      setErrorMsg('Please enter or paste customer project requirements first.');
       return;
     }
     setErrorMsg(null);
@@ -117,12 +101,12 @@ export default function NewEstimatePage() {
         body: JSON.stringify({ requirement: rawRequirement }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+      if (!res.ok) throw new Error(data.error || 'Requirement analysis failed');
 
       const req: StructuredRequirement = data.data;
       setAnalysisResult(req);
 
-      // Auto-populate admin editable controls with AI extracted baseline
+      // Populate admin controls with extracted parameters
       setServiceKey(req.primaryServiceKey.value || 'cloud-migration');
       setEnvironmentCode(req.environmentCode.value || 'aws');
       setScaleCode(req.scaleCode.value || '26_50');
@@ -130,16 +114,18 @@ export default function NewEstimatePage() {
       setTimelineCode(req.timelineCode.value || 'standard');
       setSelectedAddOns(req.detectedAddOnCodes.value || []);
 
-      // Auto calculate initial estimate for instantaneous admin feedback
-      triggerCalculation({
-        serviceKey: req.primaryServiceKey.value || 'cloud-migration',
-        environmentCode: req.environmentCode.value || 'aws',
-        scaleCode: req.scaleCode.value || '26_50',
-        complexityCode: req.complexityCode.value || 'medium',
-        timelineCode: req.timelineCode.value || 'standard',
-        addOnCodes: req.detectedAddOnCodes.value || [],
-        discountPercentage: discountPercent,
-      });
+      // If active pricing exists, run deterministic calculation
+      if (pricingActive) {
+        triggerCalculation({
+          serviceKey: req.primaryServiceKey.value || 'cloud-migration',
+          environmentCode: req.environmentCode.value || 'aws',
+          scaleCode: req.scaleCode.value || '26_50',
+          complexityCode: req.complexityCode.value || 'medium',
+          timelineCode: req.timelineCode.value || 'standard',
+          addOnCodes: req.detectedAddOnCodes.value || [],
+          discountPercentage: discountPercent,
+        });
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Requirement analysis failed.');
     } finally {
@@ -149,6 +135,11 @@ export default function NewEstimatePage() {
 
   // Step 2: Deterministic Calculation
   const triggerCalculation = async (overrideParams?: any) => {
+    if (!pricingActive) {
+      setErrorMsg('Pricing is not configured. An administrator must activate a pricing configuration before estimates can be calculated.');
+      return;
+    }
+
     setCalculating(true);
     setErrorMsg(null);
 
@@ -182,21 +173,29 @@ export default function NewEstimatePage() {
 
   // Step 3: Save Estimate and Generate Proposal
   const handleSaveEstimate = async () => {
-    if (!calculationResult) return;
+    if (!customerName.trim() || !companyName.trim()) {
+      setErrorMsg('Customer name and company name are required to generate an estimate.');
+      return;
+    }
+    if (!calculationResult) {
+      setErrorMsg('Please calculate an estimate before generating a proposal.');
+      return;
+    }
+
     setSaving(true);
     setErrorMsg(null);
 
     try {
       const payload = {
-        customerName,
-        companyName,
-        email,
-        phone,
-        rawRequirement,
+        customerName: customerName.trim(),
+        companyName: companyName.trim(),
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        rawRequirement: rawRequirement.trim(),
         structuredRequirement: analysisResult,
         calculationResult,
-        overrideReason,
-        internalNotes,
+        overrideReason: overrideReason || null,
+        internalNotes: internalNotes.trim() || null,
       };
 
       const res = await fetch('/api/estimates', {
@@ -219,7 +218,9 @@ export default function NewEstimatePage() {
       ? selectedAddOns.filter((c) => c !== code)
       : [...selectedAddOns, code];
     setSelectedAddOns(updated);
-    triggerCalculation({ addOnCodes: updated });
+    if (pricingActive) {
+      triggerCalculation({ addOnCodes: updated });
+    }
   };
 
   return (
@@ -228,15 +229,15 @@ export default function NewEstimatePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">
-            <span>Admin Estimation Pipeline</span>
+            <span>PrimeIntel Workbench</span>
             <span>•</span>
-            <span>Step-by-Step Workbench</span>
+            <span>Production Estimation Pipeline</span>
           </div>
           <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
             Create Project Estimate
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Paste natural language project requirements. The AI parses scope and unknowns; the deterministic engine computes reproducible pricing.
+            Input genuine customer requirements. AI extracts architectural scope; the deterministic engine produces reproducible pricing.
           </p>
         </div>
 
@@ -254,6 +255,19 @@ export default function NewEstimatePage() {
         </div>
       </div>
 
+      {/* Safety Notice if Pricing Version is Unconfigured (Section 47) */}
+      {pricingActive === false && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-sm">Pricing is Not Configured</span>
+            <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+              No active pricing version is currently published in the system. An administrator must activate a pricing configuration before estimates can be generated.
+            </p>
+          </div>
+        </div>
+      )}
+
       {errorMsg && (
         <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -265,7 +279,7 @@ export default function NewEstimatePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* LEFT COLUMN (7 Cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Customer & Lead Details Card */}
+          {/* Customer & Account Details Card */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <User className="w-3.5 h-3.5 text-blue-600" />
@@ -278,9 +292,11 @@ export default function NewEstimatePage() {
                 </label>
                 <input
                   type="text"
+                  placeholder="e.g. John Doe"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  required
                 />
               </div>
               <div>
@@ -289,9 +305,11 @@ export default function NewEstimatePage() {
                 </label>
                 <input
                   type="text"
+                  placeholder="e.g. Acme Enterprises"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  required
                 />
               </div>
               <div>
@@ -300,6 +318,7 @@ export default function NewEstimatePage() {
                 </label>
                 <input
                   type="email"
+                  placeholder="contact@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -311,6 +330,7 @@ export default function NewEstimatePage() {
                 </label>
                 <input
                   type="text"
+                  placeholder="+91 ..."
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -324,31 +344,16 @@ export default function NewEstimatePage() {
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                2. Paste Customer Requirement
+                2. Customer Requirements
               </h3>
               <span className="text-[11px] text-slate-400">Natural language input</span>
             </div>
 
-            {/* Quick Sample Selector */}
-            <div className="flex flex-wrap gap-2 text-[11px]">
-              <span className="text-slate-400 self-center">Try prompt:</span>
-              {SAMPLE_SCENARIOS.map((sc, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => loadScenario(sc)}
-                  className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-600 border border-slate-200 transition-colors"
-                >
-                  {sc.title.split(':')[0]}
-                </button>
-              ))}
-            </div>
-
             <textarea
-              rows={5}
+              rows={6}
               value={rawRequirement}
               onChange={(e) => setRawRequirement(e.target.value)}
-              placeholder="Paste raw email, technical brief, or meeting notes here..."
+              placeholder="Paste actual customer requirements, technical emails, scope briefs, or RFP specifications..."
               className="w-full text-xs p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 leading-relaxed font-sans"
             />
 
@@ -360,8 +365,8 @@ export default function NewEstimatePage() {
               <button
                 type="button"
                 onClick={handleAnalyze}
-                disabled={analyzing}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all"
+                disabled={analyzing || !rawRequirement.trim()}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
               >
                 {analyzing ? (
                   <>
@@ -440,7 +445,7 @@ export default function NewEstimatePage() {
                 </div>
               </div>
 
-              {/* Missing Information & Unknowns (Prompt Section 9) */}
+              {/* Missing Information & Unknowns */}
               {analysisResult.unknowns.length > 0 && (
                 <div className="space-y-3 pt-2">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
@@ -483,7 +488,7 @@ export default function NewEstimatePage() {
             </div>
           )}
 
-          {/* Admin Human-in-the-Loop Override Panel (Section 10) */}
+          {/* Admin Human-in-the-Loop Review Panel */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
@@ -492,7 +497,7 @@ export default function NewEstimatePage() {
                   4. Admin Review & Parameter Adjustment
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Admin is the final authority. Tweak parameters to adjust deterministic pricing in real time.
+                  Admin is the final commercial authority. Adjust parameters to compute deterministic pricing.
                 </p>
               </div>
             </div>
@@ -500,22 +505,24 @@ export default function NewEstimatePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Primary Service
+                  Primary Service Catalog
                 </label>
                 <select
                   value={serviceKey}
                   onChange={(e) => {
                     setServiceKey(e.target.value);
-                    triggerCalculation({ serviceKey: e.target.value });
+                    if (pricingActive) triggerCalculation({ serviceKey: e.target.value });
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
                 >
-                  <option value="cloud-migration">Cloud Infrastructure Migration (Base: ₹3.0L)</option>
-                  <option value="cloud-architecture">Well-Architected Cloud Foundation (Base: ₹2.2L)</option>
-                  <option value="devops-automation">DevOps & CI/CD Platform (Base: ₹1.8L)</option>
-                  <option value="kubernetes-platform">Kubernetes Platform Engineering (Base: ₹2.6L)</option>
-                  <option value="disaster-recovery">Disaster Recovery & Continuity (Base: ₹2.0L)</option>
-                  <option value="cost-optimization">FinOps & Cloud Cost Optimization (Base: ₹1.5L)</option>
+                  {servicesCatalog.map((svc) => (
+                    <option key={svc.key} value={svc.key}>
+                      {svc.name}
+                    </option>
+                  ))}
+                  {servicesCatalog.length === 0 && (
+                    <option value="cloud-migration">Cloud Infrastructure Migration</option>
+                  )}
                 </select>
               </div>
 
@@ -527,15 +534,15 @@ export default function NewEstimatePage() {
                   value={environmentCode}
                   onChange={(e) => {
                     setEnvironmentCode(e.target.value);
-                    triggerCalculation({ environmentCode: e.target.value });
+                    if (pricingActive) triggerCalculation({ environmentCode: e.target.value });
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
                 >
-                  <option value="aws">AWS (×1.00 standard)</option>
-                  <option value="azure">Azure (×1.05)</option>
-                  <option value="gcp">Google Cloud Platform (×1.05)</option>
-                  <option value="hybrid">Hybrid / Multi-Cloud (×1.30)</option>
-                  <option value="on_premise">Private Cloud / On-Premise (×1.15)</option>
+                  <option value="aws">Amazon Web Services (AWS)</option>
+                  <option value="azure">Microsoft Azure</option>
+                  <option value="gcp">Google Cloud Platform (GCP)</option>
+                  <option value="hybrid">Hybrid / Multi-Cloud</option>
+                  <option value="on_premise">Private Cloud / On-Premise</option>
                 </select>
               </div>
 
@@ -547,15 +554,15 @@ export default function NewEstimatePage() {
                   value={scaleCode}
                   onChange={(e) => {
                     setScaleCode(e.target.value);
-                    triggerCalculation({ scaleCode: e.target.value });
+                    if (pricingActive) triggerCalculation({ scaleCode: e.target.value });
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
                 >
-                  <option value="1_10">1 – 10 Workloads / VMs (×1.00)</option>
-                  <option value="11_25">11 – 25 Workloads / VMs (×1.25)</option>
-                  <option value="26_50">26 – 50 Workloads / VMs (×1.60)</option>
-                  <option value="51_100">51 – 100 Workloads / VMs (×2.10)</option>
-                  <option value="101_plus">101+ Workloads / Hyperscale (×2.80)</option>
+                  <option value="1_10">1 – 10 Workloads / VMs</option>
+                  <option value="11_25">11 – 25 Workloads / VMs</option>
+                  <option value="26_50">26 – 50 Workloads / VMs</option>
+                  <option value="51_100">51 – 100 Workloads / VMs</option>
+                  <option value="101_plus">101+ Workloads / Hyperscale</option>
                 </select>
               </div>
 
@@ -567,14 +574,14 @@ export default function NewEstimatePage() {
                   value={complexityCode}
                   onChange={(e) => {
                     setComplexityCode(e.target.value);
-                    triggerCalculation({ complexityCode: e.target.value });
+                    if (pricingActive) triggerCalculation({ complexityCode: e.target.value });
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
                 >
-                  <option value="low">Low (Lift-and-shift, minimal DB) (×0.85)</option>
-                  <option value="medium">Medium (Standard multi-tier) (×1.00)</option>
-                  <option value="high">High (Complex topologies, clustering) (×1.35)</option>
-                  <option value="enterprise">Enterprise (Mission-critical, zero downtime) (×1.75)</option>
+                  <option value="low">Low (Standard lift-and-shift)</option>
+                  <option value="medium">Medium (Standard multi-tier)</option>
+                  <option value="high">High (Complex clustering & networks)</option>
+                  <option value="enterprise">Enterprise (Mission-critical, zero downtime)</option>
                 </select>
               </div>
 
@@ -586,14 +593,14 @@ export default function NewEstimatePage() {
                   value={timelineCode}
                   onChange={(e) => {
                     setTimelineCode(e.target.value);
-                    triggerCalculation({ timelineCode: e.target.value });
+                    if (pricingActive) triggerCalculation({ timelineCode: e.target.value });
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
                 >
-                  <option value="flexible">Flexible (&gt; 12 weeks) (×0.95)</option>
-                  <option value="standard">Standard (8 – 12 weeks) (×1.00)</option>
-                  <option value="accelerated">Accelerated (4 – 7 weeks) (×1.20)</option>
-                  <option value="urgent">Urgent (&lt; 4 weeks) (×1.45)</option>
+                  <option value="flexible">Flexible (&gt; 12 weeks)</option>
+                  <option value="standard">Standard (8 – 12 weeks)</option>
+                  <option value="accelerated">Accelerated (4 – 7 weeks)</option>
+                  <option value="urgent">Urgent (&lt; 4 weeks)</option>
                 </select>
               </div>
             </div>
@@ -601,19 +608,19 @@ export default function NewEstimatePage() {
             {/* Technical Add-ons Checklist */}
             <div className="pt-2">
               <label className="block text-[11px] font-semibold text-slate-700 mb-2">
-                Technical Add-Ons & Architectural Modules
+                Technical Modules & Add-Ons
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {[
-                  { code: 'ha', name: 'High Availability (Multi-AZ)', price: '₹40,000' },
-                  { code: 'dr', name: 'Disaster Recovery (Cross-Region)', price: '₹60,000' },
-                  { code: 'terraform', name: 'Infrastructure as Code (Terraform)', price: '₹30,000' },
-                  { code: 'cicd', name: 'CI/CD Deployment Pipelines', price: '₹25,000' },
-                  { code: 'monitoring', name: 'Centralized Observability & Alerts', price: '₹20,000' },
-                  { code: 'security_hardening', name: 'Security Hardening & CIS Benchmarks', price: '₹45,000' },
-                  { code: 'support_24_7', name: '24/7 Managed Support Setup', price: '₹50,000' },
-                  { code: 'backup_automation', name: 'Automated Snapshot Policies', price: '₹20,000' },
-                  { code: 'kubernetes', name: 'Kubernetes Platform Setup', price: '₹65,000' },
+                  { code: 'ha', name: 'High Availability (Multi-AZ)' },
+                  { code: 'dr', name: 'Disaster Recovery (Cross-Region)' },
+                  { code: 'terraform', name: 'Infrastructure as Code (Terraform)' },
+                  { code: 'cicd', name: 'CI/CD Deployment Pipelines' },
+                  { code: 'monitoring', name: 'Observability & Monitoring' },
+                  { code: 'security_hardening', name: 'Security Hardening & CIS Benchmarks' },
+                  { code: 'support_24_7', name: '24/7 Managed Support Setup' },
+                  { code: 'backup_automation', name: 'Automated Snapshot Policies' },
+                  { code: 'kubernetes', name: 'Kubernetes Platform Setup' },
                 ].map((addon) => {
                   const isChecked = selectedAddOns.includes(addon.code);
                   return (
@@ -636,34 +643,52 @@ export default function NewEstimatePage() {
                         </div>
                         <span className="text-[11px]">{addon.name}</span>
                       </div>
-                      <span className="font-mono text-[11px] text-slate-500 font-normal">
-                        +{addon.price}
-                      </span>
                     </label>
                   );
                 })}
               </div>
             </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => triggerCalculation()}
+                disabled={calculating || !pricingActive}
+                className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2"
+              >
+                {calculating ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Calculating Estimate...
+                  </>
+                ) : (
+                  <>
+                    <Calculator className="w-3.5 h-3.5" />
+                    Calculate Deterministic Estimate
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN (5 Cols): Real-Time Deterministic Estimate & Commercials */}
+        {/* RIGHT COLUMN (5 Cols): Real-Time Estimate & Commercials */}
         <div className="lg:col-span-5 space-y-6 sticky top-6">
           {/* Main Indicative Range Card */}
           <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-800 space-y-6">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">
-                  Indicative Estimate
+                  Indicative Commercial Range
                 </span>
                 <div className="text-2xl font-bold font-mono tracking-tight text-white mt-1">
                   {calculationResult ? (
-                    <>
-                      ₹{(calculationResult.indicativeLow / 100000).toFixed(2)}L – ₹
-                      {(calculationResult.indicativeHigh / 100000).toFixed(2)}L
-                    </>
+                    formatCurrencyRange(
+                      calculationResult.indicativeLow,
+                      calculationResult.indicativeHigh
+                    )
                   ) : (
-                    '₹— – ₹—'
+                    <span className="text-slate-500">Awaiting Calculation</span>
                   )}
                 </div>
               </div>
@@ -671,7 +696,7 @@ export default function NewEstimatePage() {
               <div className="text-right">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold">Estimated Timeline</span>
                 <div className="font-semibold text-slate-200 text-xs mt-1">
-                  {calculationResult?.timelineWeeks.label || '6 – 10 weeks'}
+                  {calculationResult?.timelineWeeks.label || '—'}
                 </div>
               </div>
             </div>
@@ -684,13 +709,17 @@ export default function NewEstimatePage() {
                 </div>
                 <div className="font-mono font-semibold text-slate-200 mt-1">
                   {calculationResult?.benchmarkComparison?.benchmarkFound ? (
-                    `₹${(calculationResult.benchmarkComparison.benchmarkLow! / 100000).toFixed(1)}L – ₹${(calculationResult.benchmarkComparison.benchmarkHigh! / 100000).toFixed(1)}L`
+                    formatCurrencyRange(
+                      calculationResult.benchmarkComparison.benchmarkLow!,
+                      calculationResult.benchmarkComparison.benchmarkHigh!,
+                      calculationResult.benchmarkComparison.currency
+                    )
                   ) : (
-                    'Benchmark Unavailable'
+                    <span className="text-slate-400 text-[11px]">Benchmark Unavailable</span>
                   )}
                 </div>
                 <div className="text-[9px] text-slate-400 mt-1 truncate">
-                  {calculationResult?.benchmarkComparison?.sourceName || 'Survey Index'}
+                  {calculationResult?.benchmarkComparison?.sourceName || 'No verified source'}
                 </div>
               </div>
 
@@ -700,13 +729,13 @@ export default function NewEstimatePage() {
                 </div>
                 <div className="font-mono font-bold text-blue-300 mt-1">
                   {calculationResult
-                    ? `₹${calculationResult.primeCoreRecommendedPrice.toLocaleString('en-IN')}`
+                    ? formatCurrency(calculationResult.primeCoreRecommendedPrice)
                     : '—'}
                 </div>
                 <div className="text-[9px] text-emerald-400 mt-1">
                   {calculationResult?.discount.totalDiscountAmount
-                    ? `Discount applied (-₹${calculationResult.discount.totalDiscountAmount.toLocaleString('en-IN')})`
-                    : 'Standard Card Rate'}
+                    ? `Discount applied (${formatCurrency(calculationResult.discount.totalDiscountAmount)})`
+                    : 'Standard Catalog Rate'}
                 </div>
               </div>
             </div>
@@ -726,36 +755,36 @@ export default function NewEstimatePage() {
                 onChange={(e) => {
                   const val = Number(e.target.value);
                   setDiscountPercent(val);
-                  triggerCalculation({ discountPercentage: val });
+                  if (pricingActive) triggerCalculation({ discountPercentage: val });
                 }}
                 className="w-full accent-blue-500"
               />
               <div className="flex justify-between text-[10px] text-slate-500">
                 <span>0% Standard</span>
-                <span className="text-amber-400 font-medium">Max Allowed Cap: 20%</span>
+                <span className="text-amber-400 font-medium">Policy Cap: 20%</span>
                 <span>25%</span>
               </div>
 
               {discountPercent > 20 && (
                 <div className="p-2 rounded bg-amber-950/40 border border-amber-800 text-amber-300 text-[11px] flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                  <span>Discount exceeds 20% cap! Engine strictly clamps to 20% limit.</span>
+                  <span>Discount exceeds 20% policy cap. Engine strictly clamps to 20%.</span>
                 </div>
               )}
 
               {/* Admin Price Override */}
               <div className="pt-2">
                 <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  Manual Final Override (INR) — Optional
+                  Manual Final Override (INR) — Requires Justification
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="number"
-                    placeholder="e.g. 520000"
+                    placeholder="Enter custom final amount..."
                     value={adminOverridePrice}
                     onChange={(e) => {
                       setAdminOverridePrice(e.target.value);
-                      triggerCalculation({ adminOverridePrice: e.target.value });
+                      if (pricingActive) triggerCalculation({ adminOverridePrice: e.target.value });
                     }}
                     className="flex-1 text-xs px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
                   />
@@ -764,10 +793,11 @@ export default function NewEstimatePage() {
                   <div className="mt-2">
                     <input
                       type="text"
-                      placeholder="Mandatory Reason: e.g. Strategic Anchor Client"
+                      placeholder="Mandatory Reason: e.g. Contractual Strategic Concession"
                       value={overrideReason}
                       onChange={(e) => setOverrideReason(e.target.value)}
                       className="w-full text-xs px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-500 focus:outline-none"
+                      required
                     />
                   </div>
                 )}
@@ -780,12 +810,12 @@ export default function NewEstimatePage() {
                 type="button"
                 onClick={handleSaveEstimate}
                 disabled={saving || !calculationResult}
-                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2"
+                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {saving ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    Persisting Estimate...
+                    Recording Proposal...
                   </>
                 ) : (
                   <>
@@ -797,7 +827,7 @@ export default function NewEstimatePage() {
             </div>
           </div>
 
-          {/* Internal Line-Item Calculation Breakdown (Section 24) */}
+          {/* Internal Line-Item Calculation Breakdown */}
           {calculationResult && (
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 text-xs">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -813,64 +843,64 @@ export default function NewEstimatePage() {
                 <div className="flex justify-between">
                   <span>Base Service Fee:</span>
                   <span className="font-semibold text-slate-800">
-                    ₹{calculationResult.service.basePrice.toLocaleString('en-IN')}
+                    {formatCurrency(calculationResult.service.basePrice)}
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-500">
                   <span>
-                    Environment Factor ({calculationResult.factors.environment.label}):
+                    Environment ({calculationResult.factors.environment.label}):
                   </span>
                   <span>×{calculationResult.factors.environment.multiplier}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
-                  <span>Scale Factor ({calculationResult.factors.scale.label}):</span>
+                  <span>Scale ({calculationResult.factors.scale.label}):</span>
                   <span>×{calculationResult.factors.scale.multiplier}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
                   <span>
-                    Complexity Factor ({calculationResult.factors.complexity.label}):
+                    Complexity ({calculationResult.factors.complexity.label}):
                   </span>
                   <span>×{calculationResult.factors.complexity.multiplier}</span>
                 </div>
                 <div className="flex justify-between text-slate-500">
-                  <span>Timeline Factor ({calculationResult.factors.timeline.label}):</span>
+                  <span>Timeline ({calculationResult.factors.timeline.label}):</span>
                   <span>×{calculationResult.factors.timeline.multiplier}</span>
                 </div>
 
                 <div className="flex justify-between pt-1 border-t border-slate-100 text-slate-800 font-medium">
                   <span>Scaled Infrastructure Base:</span>
-                  <span>₹{calculationResult.scaledBasePrice.toLocaleString('en-IN')}</span>
+                  <span>{formatCurrency(calculationResult.scaledBasePrice)}</span>
                 </div>
 
                 {calculationResult.addOns.map((item) => (
                   <div key={item.code} className="flex justify-between text-slate-500">
                     <span>+ {item.name}:</span>
-                    <span>₹{item.calculatedAmount.toLocaleString('en-IN')}</span>
+                    <span>{formatCurrency(item.calculatedAmount)}</span>
                   </div>
                 ))}
 
                 <div className="flex justify-between pt-1 border-t border-slate-200 font-bold text-slate-900">
                   <span>Subtotal:</span>
-                  <span>₹{calculationResult.subtotal.toLocaleString('en-IN')}</span>
+                  <span>{formatCurrency(calculationResult.subtotal)}</span>
                 </div>
 
                 {calculationResult.discount.totalDiscountAmount > 0 && (
                   <div className="flex justify-between text-emerald-600 font-medium">
                     <span>Discount ({calculationResult.discount.requestedPercentage}%):</span>
-                    <span>-₹{calculationResult.discount.totalDiscountAmount.toLocaleString('en-IN')}</span>
+                    <span>-{formatCurrency(calculationResult.discount.totalDiscountAmount)}</span>
                   </div>
                 )}
 
                 {calculationResult.adminOverride && (
                   <div className="flex justify-between text-blue-600 font-medium">
                     <span>Admin Override:</span>
-                    <span>₹{calculationResult.adminOverride.overridePrice.toLocaleString('en-IN')}</span>
+                    <span>{formatCurrency(calculationResult.adminOverride.overridePrice)}</span>
                   </div>
                 )}
 
                 <div className="flex justify-between pt-2 border-t-2 border-slate-800 font-bold text-slate-900 text-xs">
                   <span>Final Calculated:</span>
-                  <span className="text-blue-700">₹{calculationResult.finalPrice.toLocaleString('en-IN')}</span>
+                  <span className="text-blue-700">{formatCurrency(calculationResult.finalPrice)}</span>
                 </div>
               </div>
             </div>

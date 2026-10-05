@@ -137,11 +137,33 @@ describe('Deterministic Pricing Engine', () => {
       addOnCodes: ['ha', 'dr'],
     };
 
-    const result = calculateEstimate(input, DEFAULT_PRICING_CONFIG);
+    const configWithBenchmark = {
+      ...DEFAULT_PRICING_CONFIG,
+      benchmarks: [
+        {
+          serviceKey: 'cloud-migration',
+          region: 'India',
+          currency: 'INR',
+          lowPrice: 500000,
+          highPrice: 700000,
+          sourceName: 'Market Survey',
+          retrievedDate: '2026-09-01',
+          scopeDescription: 'Cloud Migration',
+          confidence: 'High' as const,
+          active: true,
+        },
+      ],
+    };
+
+    const result = calculateEstimate(input, configWithBenchmark);
     expect(result.benchmarkComparison?.benchmarkFound).toBe(true);
     expect(result.benchmarkComparison?.benchmarkLow).toBe(500000);
     expect(result.benchmarkComparison?.benchmarkHigh).toBe(700000);
     expect(result.benchmarkComparison?.currency).toBe('INR');
+
+    // When benchmark is not present in config, gracefully report unavailable
+    const resultEmpty = calculateEstimate(input, DEFAULT_PRICING_CONFIG);
+    expect(resultEmpty.benchmarkComparison?.benchmarkFound).toBe(false);
   });
 
   it('throws an error for non-existent service keys', () => {

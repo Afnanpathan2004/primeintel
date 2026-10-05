@@ -2,19 +2,23 @@
 
 ## 1. Core Mathematical Model
 
-The PrimeCore Pricing Engine evaluates project estimates deterministically through layered calculation stages:
+The PrimeIntel Pricing Engine evaluates project estimates deterministically through layered mathematical stages:
 
 ```
-Subtotal = (Base_Price * Environment_Multiplier * Scale_Multiplier * Complexity_Multiplier) 
+Scaled_Base = Base_Price * Environment_Multiplier * Scale_Multiplier * Complexity_Multiplier
+
+Subtotal = Scaled_Base 
            + Sum(AddOn_Fixed) 
            + Sum(AddOn_Percentage * Scaled_Base)
            + Timeline_Acceleration_Fee
 
 Calculated_PrimeCore_Price = Clamp(Subtotal, Service_Min_Price, Service_Max_Price)
 
+Max_Discount = Calculated_PrimeCore_Price * (Max_Allowed_Discount_Percent / 100)
+
 Discount_Amount = Min(
     Calculated_PrimeCore_Price * (Admin_Discount_Percent / 100) + Admin_Discount_Fixed,
-    Calculated_PrimeCore_Price * (Max_Allowed_Discount_Percent / 100)
+    Max_Discount
 )
 
 Final_PrimeCore_Price = Calculated_PrimeCore_Price - Discount_Amount
@@ -63,11 +67,19 @@ Indicative_Band = [
 - **24/7 Managed Infrastructure Support (Initial Setup / Handover)**: Fixed ₹50,000
 - **Kubernetes / EKS / Container Orchestration**: Fixed ₹65,000
 
-## 4. Market Benchmark Layer
-- Benchmark bands are independent from PrimeCore pricing rules.
-- Each benchmark entry tracks: Region, Currency, Low, High, Source, Date Retrieved, Scope, Confidence.
-- Used side-by-side with PrimeCore Recommended price to demonstrate value and competitive positioning.
+## 4. Active Pricing Version Enforcement
+- The pricing engine strictly requires an `ACTIVE` pricing version in the database to execute calculations.
+- If no active version exists, requests fail fast with a descriptive 400 error requiring administrator activation.
+- The snapshot of the active version is serialized into the estimate at creation time for immutable auditability.
 
-## 5. Discount Guardrails
-- **Max Discount Enforcement**: Strict cap (default 20%). Discounts exceeding this cap are rejected server-side.
-- **Admin Overrides**: Must document explicit `overrideReason`.
+## 5. Discount Guardrails & Governance
+- **Ceiling Enforcement**: The maximum allowed discount is governed by `PricingVersion.maxDiscountPercentage` (default 20%).
+- **Server Validation**: The server rejects any discount percentage exceeding the ceiling unless explicitly approved via an administrator override with a mandatory `overrideReason`.
+- **Audit Logging**: Any override triggers an append-only entry in `AuditLog`.
+
+## 6. Currency Representation & Indian Numbering
+- All calculations are processed internally as floating-point / integer decimals in standard currency units (e.g., INR).
+- The presentation layer formats currency using the domain-level `src/lib/currency.ts` engine:
+  - Standard format: `₹5,40,000`
+  - Compact format: `₹5.40L` or `₹1.25Cr`
+  - Spread range: `₹5.40L – ₹6.20L`

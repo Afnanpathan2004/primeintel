@@ -5,9 +5,8 @@ import {
   PlusCircle,
   Building,
   ArrowRight,
-  Clock,
-  Filter,
 } from 'lucide-react';
+import { formatCurrency, formatCurrencyRange } from '@/lib/currency';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +26,7 @@ export default async function EstimatesListPage() {
             Estimates Archive
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Complete registry of all generated client estimates and proposals with pricing snapshot history.
+            Auditable registry of all calculated client proposals with immutable pricing version snapshots.
           </p>
         </div>
 
@@ -44,9 +43,9 @@ export default async function EstimatesListPage() {
         {estimates.length === 0 ? (
           <div className="py-20 text-center">
             <FileSpreadsheet className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <h4 className="font-semibold text-slate-700 text-sm">No estimates found</h4>
+            <h4 className="font-semibold text-slate-700 text-sm">No estimates have been created</h4>
             <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 mb-4">
-              Create your first estimate by pasting a customer requirement.
+              Enter real customer requirements into the workbench to produce the first estimate.
             </p>
             <Link
               href="/admin/estimates/new"
@@ -91,28 +90,16 @@ export default async function EstimatesListPage() {
                       </span>
                     </td>
                     <td className="py-4 px-6 font-mono font-semibold text-slate-900">
-                      ₹{est.finalPrice.toLocaleString('en-IN')}
+                      {formatCurrency(est.finalPrice, est.currency)}
                     </td>
                     <td className="py-4 px-6 font-mono text-slate-600">
-                      ₹{(est.indicativeLow / 100000).toFixed(1)}L – ₹{(est.indicativeHigh / 100000).toFixed(1)}L
+                      {formatCurrencyRange(est.indicativeLow, est.indicativeHigh, est.currency)}
                     </td>
                     <td className="py-4 px-6 font-mono text-[11px] text-slate-500">
                       v{est.pricingVersion.version}
                     </td>
                     <td className="py-4 px-6">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                          est.status === 'WON'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : est.status === 'SENT'
-                            ? 'bg-blue-100 text-blue-800'
-                            : est.status === 'ASSESSMENT_REQUESTED'
-                            ? 'bg-indigo-100 text-indigo-800'
-                            : est.status === 'REVIEWED'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-800">
                         {est.status}
                       </span>
                     </td>

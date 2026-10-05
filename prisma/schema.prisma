@@ -7,6 +7,30 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  name               String
+  role               String    @default("ESTIMATOR") // SUPER_ADMIN, ADMIN, ESTIMATOR, VIEWER
+  passwordHash       String
+  salt               String
+  mustChangePassword Boolean   @default(false)
+  active             Boolean   @default(true)
+  lastLoginAt        DateTime?
+  sessions           Session[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model Service {
   id          String   @id @default(cuid())
   key         String   @unique
@@ -38,7 +62,7 @@ model AddOn {
   name        String
   description String
   pricingType String   // "FIXED" | "PERCENTAGE"
-  value       Float    // rupee amount or percentage e.g. 10 for 10%
+  value       Float    // Monetary amount or percentage
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -56,6 +80,7 @@ model MarketBenchmark {
   retrievedDate    DateTime @default(now())
   scopeDescription String
   confidence       String   @default("Medium") // "High", "Medium", "Low"
+  status           String   @default("VERIFIED") // "DRAFT", "VERIFIED", "EXPIRED", "ARCHIVED"
   assumptions      String?
   notes            String?
   active           Boolean  @default(true)
@@ -64,35 +89,45 @@ model MarketBenchmark {
 }
 
 model PricingVersion {
-  id             String     @id @default(cuid())
-  version        String     @unique // e.g. "2026.10.01"
-  description    String
-  isActive       Boolean    @default(true)
-  configSnapshot String     // Complete JSON snapshot of services, multipliers, add-ons
-  createdAt      DateTime   @default(now())
-  estimates      Estimate[]
+  id                    String     @id @default(cuid())
+  version               String     @unique // e.g. "2026.10.01"
+  description           String
+  status                String     @default("ACTIVE") // "DRAFT", "ACTIVE", "ARCHIVED"
+  isActive              Boolean    @default(true)
+  maxDiscountPercentage Float      @default(20)
+  spreadPercentage      Float      @default(0.08)
+  currency              String     @default("INR")
+  configSnapshot        String     // Immutable JSON snapshot of services, multipliers, add-ons
+  createdBy             String?
+  approvedBy            String?
+  approvedAt            DateTime?
+  estimates             Estimate[]
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @default(now()) @updatedAt
 }
 
 model Estimate {
-  id                    String          @id @default(cuid())
-  estimateNumber        String          @unique // e.g. "PC-2026-0001"
+  id                    String             @id @default(cuid())
+  estimateNumber        String             @unique // e.g. "PC-2026-0001"
+  revisionNumber        Int                @default(1)
   customerName          String
   companyName           String
   email                 String?
   phone                 String?
   website               String?
   rawRequirement        String
-  structuredRequirement String          // JSON
+  structuredRequirement String             // JSON
   pricingVersionId      String
-  pricingVersion        PricingVersion  @relation(fields: [pricingVersionId], references: [id])
-  pricingSnapshot       String          // Immutable JSON snapshot of pricing rules used
-  status                String          @default("DRAFT") // DRAFT, GENERATED, REVIEWED, SENT, ASSESSMENT_REQUESTED, PROPOSAL_CREATED, WON, LOST
+  pricingVersion        PricingVersion     @relation(fields: [pricingVersionId], references: [id])
+  pricingSnapshot       String             // Immutable JSON snapshot of pricing rules used
+  status                String             @default("DRAFT") // DRAFT, CALCULATED, REVIEWED, APPROVED, EXPORTED, SENT, CLOSED, CANCELLED
+  currency              String             @default("INR")
   
   calculatedBasePrice   Float
   calculatedAddOnsTotal Float
   calculatedSubtotal    Float
-  discountPercentage    Float           @default(0)
-  discountAmount        Float           @default(0)
+  discountPercentage    Float              @default(0)
+  discountAmount        Float              @default(0)
   adminOverridePrice    Float?
   overrideReason        String?
   finalPrice            Float
@@ -102,34 +137,45 @@ model Estimate {
   timelineWeeksMin      Int
   timelineWeeksMax      Int
   
-  assumptions           String          // JSON array
-  unknowns              String          // JSON array
-  calculationBreakdown  String          // JSON object
-  benchmarkComparison   String?         // JSON object
+  assumptions           String             // JSON array
+  unknowns              String             // JSON array
+  calculationBreakdown  String             // JSON array/object
+  benchmarkComparison   String?            // JSON object
   internalNotes         String?
   
-  createdBy             String          @default("PrimeCore Estimator")
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  createdBy             String
+  approvedBy            String?
+  approvedAt            DateTime?
+  revisions             EstimateRevision[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+}
+
+model EstimateRevision {
+  id             String   @id @default(cuid())
+  estimateId     String
+  estimate       Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  revisionNumber Int
+  finalPrice     Float
+  indicativeLow  Float
+  indicativeHigh Float
+  discountAmount Float
+  overrideReason String?
+  snapshot       String   // JSON snapshot of estimate at revision time
+  changedBy      String
+  changeReason   String
+  createdAt      DateTime @default(now())
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  entityType  String   // "ESTIMATE", "PRICING_RULE", "DISCOUNT", "OVERRIDE"
-  entityId    String
-  action      String   // "CREATE", "UPDATE", "OVERRIDE", "STATUS_CHANGE"
-  performedBy String
-  oldValue    String?  // JSON
-  newValue    String?  // JSON
-  reason      String?
-  createdAt   DateTime @default(now())
-}
-
-model AdminUser {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  role         String   @default("ADMIN") // "ADMIN", "ESTIMATOR", "CONSULTANT"
-  passwordHash String
-  createdAt    DateTime @default(now())
+  id        String   @id @default(cuid())
+  actor     String   // email or user ID who performed action
+  action    String   // "CREATE", "UPDATE", "OVERRIDE", "STATUS_CHANGE", "APPROVE", "EXPORT", "LOGIN", "PRICING_CHANGE"
+  entity    String   // "ESTIMATE", "PRICING_VERSION", "SERVICE", "BENCHMARK", "USER"
+  entityId  String
+  oldValue  String?  // JSON
+  newValue  String?  // JSON
+  reason    String?
+  metadata  String?  // JSON
+  createdAt DateTime @default(now())
 }

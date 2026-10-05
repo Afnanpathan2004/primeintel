@@ -7,9 +7,8 @@ import {
   Phone,
   ArrowRight,
   TrendingUp,
-  Clock,
-  CheckCircle,
 } from 'lucide-react';
+import { formatCurrency, formatCompactCurrency } from '@/lib/currency';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,14 +17,16 @@ export default async function LeadsPage() {
     orderBy: { createdAt: 'desc' },
   });
 
+  const totalValue = estimates.reduce((acc, curr) => acc + curr.finalPrice, 0);
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="border-b border-slate-200 pb-5">
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-          Client Leads & Pipeline
+          Client Pipeline & Account Records
         </h2>
         <p className="text-xs text-slate-500 mt-1">
-          Direct commercial pipeline derived from incoming customer requirement estimates.
+          Direct commercial relationships initiated from incoming customer estimate briefs.
         </p>
       </div>
 
@@ -33,28 +34,34 @@ export default async function LeadsPage() {
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div className="text-xs font-semibold text-slate-500">Total Leads</div>
           <div className="text-2xl font-bold text-slate-900 mt-1">{estimates.length}</div>
-          <div className="text-[11px] text-slate-400 mt-1">From processed estimates</div>
+          <div className="text-[11px] text-slate-400 mt-1">From processed requirements</div>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
           <div className="text-xs font-semibold text-slate-500">Pipeline Value</div>
           <div className="text-2xl font-bold text-emerald-700 mt-1 font-mono">
-            ₹{(estimates.reduce((acc, curr) => acc + curr.finalPrice, 0) / 100000).toFixed(1)}L
+            {totalValue > 0 ? formatCompactCurrency(totalValue) : '—'}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">Aggregate indicative value</div>
+          <div className="text-[11px] text-slate-400 mt-1">
+            {totalValue > 0 ? 'Aggregate calculated pipeline' : 'No pipeline value logged'}
+          </div>
         </div>
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-semibold text-slate-500">Assessment Inquiries</div>
+          <div className="text-xs font-semibold text-slate-500">Active Proposals</div>
           <div className="text-2xl font-bold text-blue-700 mt-1">
-            {estimates.filter((e) => e.status === 'ASSESSMENT_REQUESTED' || e.status === 'SENT').length}
+            {estimates.filter((e) => e.status === 'SENT' || e.status === 'APPROVED' || e.status === 'REVIEWED').length}
           </div>
-          <div className="text-[11px] text-slate-400 mt-1">Active discussions</div>
+          <div className="text-[11px] text-slate-400 mt-1">In active client dialogue</div>
         </div>
       </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {estimates.length === 0 ? (
           <div className="py-20 text-center text-slate-500 text-xs">
-            No customer leads found. Create an estimate to initiate a lead profile.
+            <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <div className="font-semibold text-slate-700 text-sm">No leads recorded yet</div>
+            <div className="text-slate-400 mt-1">
+              When a new estimate is created with customer and company details, it automatically appears here.
+            </div>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -99,7 +106,7 @@ export default async function LeadsPage() {
                       </Link>
                     </td>
                     <td className="py-4 px-6 font-mono font-semibold text-slate-900">
-                      ₹{lead.finalPrice.toLocaleString('en-IN')}
+                      {formatCurrency(lead.finalPrice, lead.currency)}
                     </td>
                     <td className="py-4 px-6">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-800">

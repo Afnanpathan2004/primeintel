@@ -22,7 +22,20 @@ import {
   RefreshCw,
   Eye,
   Lock,
+  GitBranch,
 } from 'lucide-react';
+import { formatCurrency, formatCurrencyRange } from '@/lib/currency';
+
+const LIFECYCLE_STATUSES = [
+  { value: 'DRAFT', label: 'Draft' },
+  { value: 'CALCULATED', label: 'Calculated' },
+  { value: 'REVIEWED', label: 'Reviewed by Estimator' },
+  { value: 'APPROVED', label: 'Approved by Commercial Lead' },
+  { value: 'EXPORTED', label: 'Exported / PDF Created' },
+  { value: 'SENT', label: 'Sent to Customer' },
+  { value: 'CLOSED', label: 'Closed / Won' },
+  { value: 'CANCELLED', label: 'Cancelled / Lost' },
+];
 
 export default function EstimateDetailPage() {
   const params = useParams();
@@ -103,7 +116,7 @@ export default function EstimateDetailPage() {
       <div className="text-center py-20 text-slate-600">
         <h3 className="font-bold text-lg">Estimate Not Found</h3>
         <Link href="/admin/estimates" className="text-blue-600 text-xs mt-2 inline-block">
-          &larr; Back to Estimates
+          &larr; Back to Estimates Archive
         </Link>
       </div>
     );
@@ -114,9 +127,10 @@ export default function EstimateDetailPage() {
   const unknowns: any[] = JSON.parse(estimate.unknowns || '[]');
   const breakdown: string[] = JSON.parse(estimate.calculationBreakdown || '[]');
   const benchmark = estimate.benchmarkComparison ? JSON.parse(estimate.benchmarkComparison) : null;
+  const revisions = estimate.revisions || [];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-20">
+    <div className="max-w-5xl mx-auto space-y-6 pb-20 font-sans">
       {/* Top Action Bar (Hidden when printing) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print border-b border-slate-200 pb-4">
         <div className="flex items-center gap-3">
@@ -134,37 +148,41 @@ export default function EstimateDetailPage() {
               <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-800">
                 {estimate.status}
               </span>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                Rev {estimate.revisionNumber || 1}
+              </span>
             </div>
             <p className="text-xs text-slate-500">
-              Created for {estimate.customerName} ({estimate.companyName})
+              Account: {estimate.customerName} ({estimate.companyName})
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Status Dropdown */}
+          {/* Status Lifecycle Dropdown */}
           <select
             value={estimate.status}
             onChange={(e) => handleStatusChange(e.target.value)}
             disabled={updatingStatus}
             className="text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm focus:outline-none"
           >
-            <option value="DRAFT">Draft</option>
-            <option value="GENERATED">Generated</option>
-            <option value="REVIEWED">Reviewed</option>
-            <option value="SENT">Sent to Client</option>
-            <option value="ASSESSMENT_REQUESTED">Assessment Requested</option>
-            <option value="WON">Project Won</option>
-            <option value="LOST">Lost</option>
+            {LIFECYCLE_STATUSES.map((st) => (
+              <option key={st.value} value={st.value}>
+                {st.label}
+              </option>
+            ))}
           </select>
 
           {/* Print Proposal Button */}
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              handleStatusChange('EXPORTED');
+              window.print();
+            }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-colors"
           >
             <Printer className="w-4 h-4" />
-            Print / Export PDF
+            Print / Save Proposal PDF
           </button>
         </div>
       </div>
@@ -216,7 +234,7 @@ export default function EstimateDetailPage() {
                 </div>
               </div>
               <p className="text-xs text-slate-500">
-                https://primecoreinfo.com • solutions@primecoreinfo.com
+                solutions@primecoreinfo.com • https://primecoreinfo.com
               </p>
             </div>
 
@@ -229,6 +247,9 @@ export default function EstimateDetailPage() {
               </div>
               <div className="text-xs text-slate-500">
                 Date: {new Date(estimate.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                Revision: {estimate.revisionNumber || 1}
               </div>
             </div>
           </div>
@@ -250,29 +271,29 @@ export default function EstimateDetailPage() {
                 Engagement Overview
               </h3>
               <div className="text-xs text-slate-700 leading-relaxed">
-                {structuredReq.summary || 'Cloud Infrastructure Architecture and Delivery'}
+                {structuredReq.summary || 'Cloud Infrastructure Architecture and Delivery Engagement'}
               </div>
               <div className="mt-3 flex items-center gap-2 text-xs text-slate-600">
                 <span className="font-semibold">Target Environment:</span>
                 <span className="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-800 font-medium text-[11px]">
-                  {structuredReq.targetEnvironment?.value || 'AWS'}
+                  {structuredReq.targetEnvironment?.value || 'Target Cloud'}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Commercial Estimate Box */}
-          <div className="bg-gradient-to-br from-slate-900 to-blue-950 text-white rounded-2xl p-8 shadow-sm">
+          <div className="bg-slate-900 text-white rounded-2xl p-8 shadow-sm">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
               <div>
                 <span className="text-xs font-semibold text-blue-300 uppercase tracking-wider">
                   Indicative Commercial Envelope
                 </span>
                 <div className="text-3xl md:text-4xl font-bold font-mono tracking-tight text-white mt-1">
-                  ₹{(estimate.indicativeLow / 100000).toFixed(2)}L – ₹{(estimate.indicativeHigh / 100000).toFixed(2)}L
+                  {formatCurrencyRange(estimate.indicativeLow, estimate.indicativeHigh, estimate.currency)}
                 </div>
                 <p className="text-xs text-slate-300 mt-2 max-w-md">
-                  Indicative fee based on identified workload scale and technical scope. Subject to final architectural discovery.
+                  Indicative professional fee based on current workload scale. Final engagement budget formalized during technical assessment.
                 </p>
               </div>
 
@@ -284,27 +305,27 @@ export default function EstimateDetailPage() {
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">Delivery Methodology</div>
-                  <div className="text-xs text-slate-200 font-medium">Sprint-based Milestone Releases</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-semibold">Delivery Cadence</div>
+                  <div className="text-xs text-slate-200 font-medium">Milestone Sprint Deliveries</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Included Architectural Deliverables */}
+          {/* Included Deliverables */}
           <div className="space-y-4">
             <h3 className="text-sm font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-2">
               <Layers className="w-4 h-4 text-blue-600" />
-              Included Technical Scope & Deliverables
+              Included Technical Deliverables
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               {(structuredReq.technicalRequirements || [
-                'Target Cloud Landing Zone & VPC Architecture',
-                'Compute & Workload Migration Delivery',
-                'Multi-AZ High Availability Design',
+                'Target Cloud Landing Zone & Network Topology',
+                'Compute & Workload Delivery Architecture',
+                'High Availability Redundancy Configuration',
                 'Disaster Recovery Failover Drill Automation',
-                'Modular Infrastructure as Code (Terraform)',
-                'Automated CI/CD Delivery Pipelines',
+                'Infrastructure as Code (Terraform)',
+                'CI/CD Deployment Pipelines',
                 'Centralized Observability & Metric Monitoring',
               ]).map((req: string, i: number) => (
                 <div
@@ -341,21 +362,21 @@ export default function EstimateDetailPage() {
                 Recommended Next Step: Technical Discovery Assessment
               </h4>
               <p className="text-xs text-blue-800/80 mt-1 max-w-xl">
-                A 3-day deep dive by a PrimeCore Principal Cloud Architect to audit workload dependencies, databases, network sizing, and formalize exact milestone pricing.
+                A 3-day deep architectural audit by a PrimeCore Principal Cloud Consultant to evaluate workload dependencies, databases, and finalize milestone schedules.
               </p>
             </div>
             <button
-              onClick={() => handleStatusChange('ASSESSMENT_REQUESTED')}
+              onClick={() => handleStatusChange('APPROVED')}
               className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs whitespace-nowrap shadow-sm no-print"
             >
-              Request Assessment Drill
+              Confirm Assessment Scope
             </button>
           </div>
 
-          {/* Legal / Professional Disclaimer (Section 56) */}
+          {/* Disclaimer */}
           <div className="border-t border-slate-100 pt-6 text-[11px] text-slate-500 leading-relaxed">
             <span className="font-semibold text-slate-600">Estimate Disclaimer: </span>
-            This is an indicative estimate based on the information available at the time of calculation. Final pricing is subject to technical assessment, scope validation, and formal proposal. Infrastructure consumption costs levied by cloud providers (such as AWS, Azure, GCP) are billed directly to the customer and are not included in consulting fees.
+            This is an indicative estimate based on the technical specifications provided at the time of calculation. Final commercial engagement pricing is subject to discovery assessment, architecture validation, and formal statement of work. Direct cloud provider infrastructure fees are billed directly to customer cloud accounts.
           </div>
         </div>
       )}
@@ -367,16 +388,16 @@ export default function EstimateDetailPage() {
             <div>
               <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
                 <Lock className="w-4 h-4 text-blue-600" />
-                Internal Pricing Audit & Engine Breakdown
+                Internal Pricing Audit & Formula Breakdown
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Confidential commercial details. Never exposed on customer-facing exports.
+                Confidential commercial details. Omitted from customer proposal exports.
               </p>
             </div>
             <div className="text-right">
-              <span className="text-[10px] text-slate-400 uppercase font-semibold">Pricing Version</span>
+              <span className="text-[10px] text-slate-400 uppercase font-semibold">Pricing Version Snapshot</span>
               <div className="font-mono text-xs font-bold text-emerald-700">
-                v{estimate.pricingVersion?.version || '2026.10.01'}
+                v{estimate.pricingVersion?.version}
               </div>
             </div>
           </div>
@@ -384,7 +405,7 @@ export default function EstimateDetailPage() {
           {/* Mathematical Line-Item Breakdown */}
           <div className="p-5 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs space-y-3">
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-blue-400">
-              Deterministic Formula Resolution
+              Deterministic Pricing Engine Breakdown
             </h4>
             <div className="space-y-1.5 text-[11px]">
               {breakdown.map((item, idx) => (
@@ -395,12 +416,12 @@ export default function EstimateDetailPage() {
             </div>
 
             <div className="pt-3 border-t border-slate-800 flex justify-between text-xs font-bold text-white">
-              <span>Final Recorded Price:</span>
-              <span className="text-blue-400">₹{estimate.finalPrice.toLocaleString('en-IN')}</span>
+              <span>Final Recorded Fee:</span>
+              <span className="text-blue-400">{formatCurrency(estimate.finalPrice, estimate.currency)}</span>
             </div>
           </div>
 
-          {/* Benchmark Comparison Layer (Section 13, 14, 15) */}
+          {/* Benchmark Comparison */}
           {benchmark && (
             <div className="p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-3 text-xs">
               <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
@@ -411,16 +432,18 @@ export default function EstimateDetailPage() {
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold">Market Range</span>
                   <div className="font-mono font-semibold text-slate-800 mt-0.5">
-                    ₹{(benchmark.benchmarkLow / 100000).toFixed(1)}L – ₹{(benchmark.benchmarkHigh / 100000).toFixed(1)}L
+                    {benchmark.benchmarkFound
+                      ? formatCurrencyRange(benchmark.benchmarkLow, benchmark.benchmarkHigh, benchmark.currency)
+                      : 'Unavailable'}
                   </div>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold">Source & Region</span>
-                  <div className="text-slate-700 mt-0.5">{benchmark.sourceName} ({benchmark.region})</div>
+                  <div className="text-slate-700 mt-0.5">{benchmark.sourceName || '—'} ({benchmark.region || 'India'})</div>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold">Variance Analysis</span>
-                  <div className="text-emerald-700 font-medium mt-0.5">{benchmark.varianceVsRecommended}</div>
+                  <div className="text-emerald-700 font-medium mt-0.5">{benchmark.varianceVsRecommended || 'Aligned'}</div>
                 </div>
               </div>
             </div>
@@ -447,6 +470,34 @@ export default function EstimateDetailPage() {
             </div>
           )}
 
+          {/* Revisions History */}
+          {revisions.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="font-bold text-slate-800 uppercase tracking-wider text-xs flex items-center gap-1.5">
+                <GitBranch className="w-3.5 h-3.5 text-purple-600" />
+                Historical Revisions Trail ({revisions.length})
+              </h4>
+              <div className="space-y-2">
+                {revisions.map((rev: any) => (
+                  <div key={rev.id} className="p-3 rounded-lg border border-slate-200 text-xs space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800">Revision {rev.revisionNumber}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        {new Date(rev.createdAt).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <div className="text-slate-600">
+                      Amount: {formatCurrency(rev.finalPrice, estimate.currency)} • Changed by: {rev.changedBy}
+                    </div>
+                    <div className="text-[11px] text-slate-500 italic">
+                      Reason: &ldquo;{rev.changeReason}&rdquo;
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Raw Customer Text */}
           <div className="space-y-2">
             <h4 className="font-bold text-slate-800 uppercase tracking-wider text-xs">
@@ -457,7 +508,7 @@ export default function EstimateDetailPage() {
             </div>
           </div>
 
-          {/* Internal Estimator Notes */}
+          {/* Internal Commercial Notes */}
           <div className="space-y-3 pt-2">
             <h4 className="font-bold text-slate-800 uppercase tracking-wider text-xs">
               Internal Commercial Notes
@@ -466,7 +517,7 @@ export default function EstimateDetailPage() {
               rows={3}
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value)}
-              placeholder="Add confidential notes for sales team (e.g. customer budget range, competitor context)..."
+              placeholder="Add confidential notes for sales team..."
               className="w-full text-xs p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 font-sans"
             />
             <button

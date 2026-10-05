@@ -1,18 +1,25 @@
 import { PricingConfigurationSnapshot } from './types';
 
-export const DEFAULT_PRICING_VERSION = '2026.10.01';
+/**
+ * DEVELOPMENT & BOOTSTRAP SAMPLE CONFIGURATION
+ * 
+ * IMPORTANT: These commercial rates and multiplier values are DEVELOPMENT SAMPLE DATA.
+ * They MUST be reviewed, configured, and officially approved by PrimeCore management
+ * before generating binding commercial proposals for customers.
+ */
+export const SAMPLE_PRICING_VERSION = '2026.10.01-SAMPLE';
 
 export const DEFAULT_PRICING_CONFIG: PricingConfigurationSnapshot = {
-  version: DEFAULT_PRICING_VERSION,
-  description: 'PrimeCore Standard Cloud & DevOps Professional Services Pricing - October 2026',
-  maxDiscountPercentage: 20, // Strict maximum discount cap
+  version: SAMPLE_PRICING_VERSION,
+  description: 'SAMPLE BOOTSTRAP CONFIGURATION — Must be configured with real PrimeCore rates before production',
+  maxDiscountPercentage: 20, // Default 20% policy cap
   spreadPercentage: 0.08, // ±8% indicative envelope
   services: [
     {
       key: 'cloud-migration',
       name: 'Cloud Infrastructure Migration',
-      description: 'End-to-end migration of compute, storage, databases, and networking from on-premise or clouds to target cloud provider.',
-      basePrice: 300000, // ₹3,00,000 baseline
+      description: 'Migration of compute, storage, databases, and networking from on-premise or cloud to target cloud.',
+      basePrice: 300000,
       minPrice: 150000,
       maxPrice: 2500000,
       active: true,
@@ -20,7 +27,7 @@ export const DEFAULT_PRICING_CONFIG: PricingConfigurationSnapshot = {
     {
       key: 'cloud-architecture',
       name: 'Well-Architected Cloud Foundation',
-      description: 'Greenfield architecture design, landing zone setup, VPC topology, IAM hardening, and security baselining.',
+      description: 'Landing zone setup, VPC topology, IAM hardening, and security baselining.',
       basePrice: 220000,
       minPrice: 120000,
       maxPrice: 1500000,
@@ -38,7 +45,7 @@ export const DEFAULT_PRICING_CONFIG: PricingConfigurationSnapshot = {
     {
       key: 'kubernetes-platform',
       name: 'Kubernetes Platform Engineering (EKS/GKE/AKS)',
-      description: 'Production-ready container orchestration, ingress controllers, autoscaling, service mesh, and secret management.',
+      description: 'Container orchestration, ingress controllers, autoscaling, service mesh, and secret management.',
       basePrice: 260000,
       minPrice: 140000,
       maxPrice: 1800000,
@@ -47,7 +54,7 @@ export const DEFAULT_PRICING_CONFIG: PricingConfigurationSnapshot = {
     {
       key: 'disaster-recovery',
       name: 'Disaster Recovery & Business Continuity',
-      description: 'Cross-region DR architecture, automated failover orchestrations, backup policies, and RPO/RTO verification drills.',
+      description: 'Cross-region DR architecture, automated failover orchestrations, and RPO/RTO verification drills.',
       basePrice: 200000,
       minPrice: 110000,
       maxPrice: 1400000,
@@ -56,7 +63,7 @@ export const DEFAULT_PRICING_CONFIG: PricingConfigurationSnapshot = {
     {
       key: 'cost-optimization',
       name: 'FinOps & Cloud Cost Optimization',
-      description: 'Deep architectural cost audit, rightsizing, reservations, spot instances, and billing dashboard automation.',
+      description: 'Architectural cost audit, rightsizing, reservations, spot instances, and billing dashboard automation.',
       basePrice: 150000,
       minPrice: 80000,
       maxPrice: 900000,
@@ -91,61 +98,15 @@ export const DEFAULT_PRICING_CONFIG: PricingConfigurationSnapshot = {
     { category: 'timeline', code: 'urgent', label: 'Urgent (< 4 weeks)', multiplier: 1.45, description: 'Emergency / expedited timeline with overtime staffing', active: true },
   ],
   addOns: [
-    { code: 'ha', name: 'High Availability Architecture (Multi-AZ)', description: 'Fault-tolerant multi-AZ setup with automatic health checks and failovers', pricingType: 'FIXED', value: 40000, active: true },
+    { code: 'ha', name: 'High Availability Architecture (Multi-AZ)', description: 'Multi-AZ setup with automatic health checks and failovers', pricingType: 'FIXED', value: 40000, active: true },
     { code: 'dr', name: 'Disaster Recovery (Cross-Region RPO/RTO)', description: 'Secondary region automated pilot light / warm standby replication', pricingType: 'FIXED', value: 60000, active: true },
     { code: 'terraform', name: 'Infrastructure as Code (Terraform / OpenTofu)', description: 'Modularized, state-managed IaC covering all cloud resources', pricingType: 'FIXED', value: 30000, active: true },
-    { code: 'cicd', name: 'Automated CI/CD Deployment Pipelines', description: 'GitHub Actions / GitLab CI pipelines with automated linting, test, and deploy stages', pricingType: 'FIXED', value: 25000, active: true },
-    { code: 'monitoring', name: 'Centralized Observability & Monitoring', description: 'Prometheus, Grafana, CloudWatch dashboards, metrics, and incident alert routes', pricingType: 'FIXED', value: 20000, active: true },
-    { code: 'security_hardening', name: 'Security Hardening & CIS Benchmark Compliance', description: 'IAM least privilege, VPC flow logs, KMS encryption at rest & in transit, WAF rules', pricingType: 'FIXED', value: 45000, active: true },
+    { code: 'cicd', name: 'Automated CI/CD Deployment Pipelines', description: 'Pipelines with automated linting, test, and deploy stages', pricingType: 'FIXED', value: 25000, active: true },
+    { code: 'monitoring', name: 'Centralized Observability & Monitoring', description: 'Dashboards, metrics, and incident alert routes', pricingType: 'FIXED', value: 20000, active: true },
+    { code: 'security_hardening', name: 'Security Hardening & CIS Benchmark Compliance', description: 'IAM least privilege, VPC flow logs, KMS encryption, WAF rules', pricingType: 'FIXED', value: 45000, active: true },
     { code: 'support_24_7', name: '24/7 Managed Infrastructure Support Setup', description: 'Initial operational onboarding, runbooks, and 24/7 rotation handover', pricingType: 'FIXED', value: 50000, active: true },
     { code: 'backup_automation', name: 'Automated Backup & Snapshot Policies', description: 'Cross-account/cross-region snapshot lifecycle policies and retention rules', pricingType: 'FIXED', value: 20000, active: true },
     { code: 'kubernetes', name: 'Container Orchestration & Microservices Migration', description: 'Dockerizing services, Helm charts, ingress controllers, cert-manager', pricingType: 'FIXED', value: 65000, active: true },
   ],
-  benchmarks: [
-    {
-      serviceKey: 'cloud-migration',
-      region: 'India',
-      currency: 'INR',
-      lowPrice: 500000,
-      highPrice: 700000,
-      sourceName: 'Indian Cloud Consulting Market Survey (Indicative)',
-      sourceUrl: 'https://primecoreinfo.com/benchmarks/cloud-migration-in',
-      retrievedDate: '2026-09-15',
-      scopeDescription: 'Mid-market on-prem to AWS/Azure migration (25–50 VMs, HA, DR, CI/CD)',
-      confidence: 'High',
-      assumptions: 'Mid-sized IT consultancy billing in metro cities (Bangalore/Mumbai/Pune). Excludes cloud provider infrastructure consumption bills.',
-      notes: 'Based on surveyed market bids for 30-50 VM migrations with HA and IaC.',
-      active: true,
-    },
-    {
-      serviceKey: 'devops-automation',
-      region: 'India',
-      currency: 'INR',
-      lowPrice: 200000,
-      highPrice: 350000,
-      sourceName: 'Tech Consulting Rate Card Index 2026',
-      sourceUrl: null,
-      retrievedDate: '2026-08-20',
-      scopeDescription: 'Multi-environment GitOps pipeline setup with security scanning and container builds',
-      confidence: 'Medium',
-      assumptions: 'Standard 4–6 week engagement.',
-      notes: null,
-      active: true,
-    },
-    {
-      serviceKey: 'kubernetes-platform',
-      region: 'India',
-      currency: 'INR',
-      lowPrice: 350000,
-      highPrice: 550000,
-      sourceName: 'Cloud Native Consulting Benchmark Report',
-      sourceUrl: null,
-      retrievedDate: '2026-09-01',
-      scopeDescription: 'Enterprise Kubernetes cluster provisioning, security policies, autoscaling',
-      confidence: 'High',
-      assumptions: 'Production-ready EKS/GKE cluster with observability stack.',
-      notes: null,
-      active: true,
-    },
-  ],
+  benchmarks: [],
 };

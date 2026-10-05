@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { calculateEstimate } from '@/lib/pricing/engine';
-import { DEFAULT_PRICING_CONFIG } from '@/lib/pricing/defaults';
 import { PricingConfigurationSnapshot } from '@/lib/pricing/types';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,24 +23,28 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // Load active or requested pricing version snapshot
-    let configSnapshot: PricingConfigurationSnapshot = DEFAULT_PRICING_CONFIG;
-
+    let dbVersion = null;
     if (pricingVersionId) {
-      const dbVersion = await prisma.pricingVersion.findUnique({
+      dbVersion = await prisma.pricingVersion.findUnique({
         where: { id: pricingVersionId },
       });
-      if (dbVersion && dbVersion.configSnapshot) {
-        configSnapshot = JSON.parse(dbVersion.configSnapshot);
-      }
     } else {
-      const activeVersion = await prisma.pricingVersion.findFirst({
-        where: { isActive: true },
+      dbVersion = await prisma.pricingVersion.findFirst({
+        where: { status: 'ACTIVE' },
         orderBy: { createdAt: 'desc' },
       });
-      if (activeVersion && activeVersion.configSnapshot) {
-        configSnapshot = JSON.parse(activeVersion.configSnapshot);
-      }
     }
+
+    if (!dbVersion || !dbVersion.configSnapshot) {
+      return NextResponse.json(
+        {
+          error: 'Pricing is not configured. An administrator must activate a pricing configuration before estimates can be calculated.',
+        },
+        { status: 400 }
+      );
+    }
+
+    const configSnapshot: PricingConfigurationSnapshot = JSON.parse(dbVersion.configSnapshot);
 
     const result = calculateEstimate(
       {

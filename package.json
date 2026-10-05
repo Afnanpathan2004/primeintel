@@ -1,6 +1,6 @@
 {
-  "name": "primecore-estimation-engine",
-  "version": "0.1.0",
+  "name": "primeintel",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

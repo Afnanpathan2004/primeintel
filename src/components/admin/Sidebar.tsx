@@ -12,8 +12,7 @@ import {
   History,
   Settings,
   Shield,
-  Layers,
-  Sparkles,
+  Activity,
 } from 'lucide-react';
 
 const navigation = [
@@ -23,8 +22,8 @@ const navigation = [
   { name: 'Leads & Pipeline', href: '/admin/leads', icon: Users },
   { name: 'Pricing & Services', href: '/admin/pricing', icon: Sliders },
   { name: 'Market Benchmarks', href: '/admin/benchmarks', icon: BarChart3 },
-  { name: 'Audit Logs', href: '/admin/audit', icon: History },
-  { name: 'Settings & Snapshots', href: '/admin/settings', icon: Settings },
+  { name: 'Audit Governance', href: '/admin/audit', icon: History },
+  { name: 'System Settings', href: '/admin/settings', icon: Settings },
 ];
 
 export function Sidebar() {
@@ -35,26 +34,26 @@ export function Sidebar() {
       {/* Brand Header */}
       <div className="h-16 flex items-center px-6 border-b border-slate-800 gap-3">
         <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold tracking-tight shadow-md">
-          PC
+          PI
         </div>
         <div>
           <div className="font-semibold text-white text-sm tracking-wide">
-            PrimeCore
+            PrimeIntel
           </div>
           <div className="text-[11px] text-blue-400 font-medium uppercase tracking-wider flex items-center gap-1">
-            Estimation Engine
+            Estimation Platform
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
           </div>
         </div>
       </div>
 
-      {/* Internal MVP Notice Badge */}
+      {/* Internal Security Badge */}
       <div className="px-4 py-3 border-b border-slate-800/80 bg-slate-950/40">
         <div className="flex items-start gap-2 bg-slate-800/60 rounded-md p-2 text-[11px] text-slate-400 border border-slate-700/50">
           <Shield className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-slate-300">Internal Admin MVP</span>
-            <p className="text-[10px] text-slate-500 mt-0.5">Air-gapped from public website. Deterministic pricing enabled.</p>
+            <span className="font-semibold text-slate-300">Internal Admin System</span>
+            <p className="text-[10px] text-slate-500 mt-0.5">Air-gapped from primecoreinfo.com. Deterministic pricing rules.</p>
           </div>
         </div>
       </div>
@@ -94,8 +93,8 @@ export function Sidebar() {
       {/* Footer Info */}
       <div className="p-4 border-t border-slate-800 text-[11px] text-slate-500 space-y-1">
         <div className="flex items-center justify-between text-slate-400">
-          <span>Pricing Engine</span>
-          <span className="font-mono text-emerald-400 font-medium">v2026.10.01</span>
+          <span>Environment</span>
+          <span className="font-mono text-emerald-400 font-medium">Production Hardened</span>
         </div>
         <div className="flex items-center justify-between">
           <span>AI Engine</span>

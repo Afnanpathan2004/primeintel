@@ -3,14 +3,16 @@
 ## Architectural Boundaries
 
 ```
-[ Admin UI (Next.js / Tailwind / shadcn) ]
+[ Admin UI (Next.js 16 App Router / Tailwind / Lucide) ]
                    │
                    ▼ (Server Actions / Typed Internal API)
 ┌────────────────────────────────────────────────────────┐
 │                   Application Layer                    │
-│  - Session & Auth Guard                                │
-│  - Input Sanitization & Validation (Zod)               │
-│  - Audit Logging Controller                            │
+│  - Session & Auth Guard (Scrypt / Database Sessions)   │
+│  - Role-Based Access Control (RBAC)                    │
+│  - Input Sanitization & Ceiling Validation (Zod)       │
+│  - Health Diagnostics (/api/health)                    │
+│  - Append-Only Audit Logging Controller                │
 └────────────┬─────────────────────────────┬─────────────┘
              │                             │
              ▼                             ▼
@@ -19,26 +21,34 @@
 │  - Interface Abstraction│   │ Engine (Pure TypeScript)  │
 │  - Gemini 3.8 Flash    │    │  - Base Services          │
 │  - Schema Validation   │    │  - Complexity Multipliers │
-│  - Injection Filtering │    │  - Workload Scales        │
+│  - Prompt-Injection Tag │   │  - Workload Scales        │
 │  - Heuristic Fallback  │    │  - Add-ons (Fixed/Perc)   │
-└────────────────────────┘    │  - Discount Rules         │
+└────────────────────────┘    │  - Active Version Guard   │
+                              │  - Discount Ceiling Check │
                               │  - Benchmark Evaluator    │
+                              │  - Domain Currency Engine │
                               └─────────────┬─────────────┘
                                             │
                                             ▼
                               ┌───────────────────────────┐
                               │  Persistence Layer        │
                               │  - Prisma ORM             │
+                              │  - Atomic Transactions    │
                               │  - SQLite (Local Dev/MVP) │
                               │  - PostgreSQL Ready       │
+                              │  - Estimate Revisions     │
+                              │  - Audit Logs             │
                               └───────────────────────────┘
 ```
 
 ## Key Architectural Principles
 
 1. **Isolation of Estimation Engine**: The pricing module (`src/lib/pricing/`) is pure TypeScript, 100% testable without database, browser, or LLM mocks.
-2. **Untrusted AI Boundary**: Responses from LLM pass through strict Zod schema parsing. LLMs cannot trigger database mutations directly.
-3. **Immutability of Pricing Snapshots**: When an estimate is generated, it serializes the active pricing configuration into a JSON snapshot within the estimate record. Any subsequent modification of global pricing rules leaves historical estimates unchanged.
-4. **Separation of Presentation**:
+2. **Untrusted AI Boundary**: Responses from LLM pass through strict Zod schema parsing. LLMs cannot trigger database mutations directly and have zero knowledge of pricing tables.
+3. **Immutability of Pricing Snapshots & Version Enforcement**: When an estimate is generated, it serializes the active pricing configuration into a JSON snapshot within the estimate record. The pricing engine requires an `ACTIVE` pricing version to perform calculations.
+4. **Revision History**: When an approved or exported estimate is edited, a full snapshot is written to `EstimateRevision` before updating, preserving commercial history.
+5. **Separation of Presentation**:
    - Internal View: Shows complete cost build-up, benchmark deviations, applied discount percentages, and internal risk notes.
    - Customer-Safe Proposal View: Omits raw margins, internal discount mechanisms, and confidential benchmark datasets.
+6. **Domain Currency Engine**: `src/lib/currency.ts` centralizes all currency representation across the system, guaranteeing consistent Indian numbering notation (Lakhs/Crores) and ISO compliance.
+7. **Database Migration Readiness**: Prisma ORM abstracts the storage layer. Transitioning from SQLite to PostgreSQL requires updating the `provider` in `prisma/schema.prisma` and deploying migrations.

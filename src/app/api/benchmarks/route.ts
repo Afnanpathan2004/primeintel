@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth/session';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
@@ -14,6 +17,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const currentUser = await getCurrentUser();
+    const actorEmail = currentUser?.email || 'admin@primecoreinfo.com';
+
+    if (currentUser && !['SUPER_ADMIN', 'ADMIN'].includes(currentUser.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Adding benchmarks requires ADMIN or SUPER_ADMIN role.' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const {
       serviceKey,
@@ -25,6 +38,7 @@ export async function POST(req: NextRequest) {
       sourceUrl,
       scopeDescription,
       confidence = 'Medium',
+      status = 'VERIFIED',
       assumptions,
       notes,
     } = body;
@@ -36,32 +50,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const benchmark = await prisma.marketBenchmark.create({
-      data: {
-        serviceKey,
-        region,
-        currency,
-        lowPrice: Number(lowPrice),
-        highPrice: Number(highPrice),
-        sourceName,
-        sourceUrl: sourceUrl || null,
-        scopeDescription,
-        confidence,
-        assumptions: assumptions || null,
-        notes: notes || null,
-        active: true,
-      },
-    });
+    const benchmark = await prisma.$transaction(async (tx) => {
+      const b = await tx.marketBenchmark.create({
+        data: {
+          serviceKey,
+          region,
+          currency,
+          lowPrice: Number(lowPrice),
+          highPrice: Number(highPrice),
+          sourceName: sourceName.trim(),
+          sourceUrl: sourceUrl?.trim() || null,
+          scopeDescription: scopeDescription.trim(),
+          confidence,
+          status,
+          assumptions: assumptions?.trim() || null,
+          notes: notes?.trim() || null,
+          active: true,
+        },
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        entityType: 'PRICING_RULE',
-        entityId: benchmark.id,
-        action: 'CREATE',
-        performedBy: 'PrimeCore Admin',
-        newValue: JSON.stringify(benchmark),
-        reason: `Created new market benchmark data for ${serviceKey} (${region})`,
-      },
+      await tx.auditLog.create({
+        data: {
+          actor: actorEmail,
+          action: 'CREATE',
+          entity: 'BENCHMARK',
+          entityId: b.id,
+          newValue: JSON.stringify(b),
+          reason: `Recorded verified market benchmark for ${serviceKey} (${region})`,
+        },
+      });
+
+      return b;
     });
 
     return NextResponse.json({ success: true, data: benchmark });
