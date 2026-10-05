@@ -3,23 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Sparkles,
-  Calculator,
   AlertTriangle,
-  CheckCircle,
-  Shield,
-  Layers,
-  ArrowRight,
+  CheckCircle2,
   RefreshCw,
-  Info,
-  DollarSign,
-  Calendar,
-  Building,
-  User,
-  Mail,
-  Phone,
+  HelpCircle,
   Check,
   ChevronDown,
+  Building,
+  User,
+  Shield,
+  Layers,
+  FileText,
 } from 'lucide-react';
 import { StructuredRequirement } from '@/lib/ai/types';
 import { PricingCalculationResult } from '@/lib/pricing/types';
@@ -28,7 +22,7 @@ import { formatCurrency, formatCurrencyRange, formatCompactCurrency } from '@/li
 export default function NewEstimatePage() {
   const router = useRouter();
 
-  // Form State — Starts blank for real customer input (No dummy data)
+  // Account State
   const [customerName, setCustomerName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [email, setEmail] = useState('');
@@ -40,11 +34,11 @@ export default function NewEstimatePage() {
   const [activeVersionName, setActiveVersionName] = useState<string>('');
   const [servicesCatalog, setServicesCatalog] = useState<any[]>([]);
 
-  // Analysis State
+  // AI Analysis State
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<StructuredRequirement | null>(null);
 
-  // Admin Editable Parameters
+  // Admin Adjustable Parameters
   const [serviceKey, setServiceKey] = useState('cloud-migration');
   const [environmentCode, setEnvironmentCode] = useState('aws');
   const [scaleCode, setScaleCode] = useState('26_50');
@@ -52,7 +46,7 @@ export default function NewEstimatePage() {
   const [timelineCode, setTimelineCode] = useState('standard');
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
 
-  // Pricing State
+  // Commercial & Pricing State
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [adminOverridePrice, setAdminOverridePrice] = useState<string>('');
   const [overrideReason, setOverrideReason] = useState<string>('');
@@ -64,7 +58,6 @@ export default function NewEstimatePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if system has active pricing version and services catalog
     async function checkPricingStatus() {
       try {
         const res = await fetch('/api/pricing');
@@ -85,10 +78,10 @@ export default function NewEstimatePage() {
     checkPricingStatus();
   }, []);
 
-  // Step 1: AI Requirement Analysis
+  // Step 1: AI Analysis
   const handleAnalyze = async () => {
     if (!rawRequirement.trim()) {
-      setErrorMsg('Please enter or paste customer project requirements first.');
+      setErrorMsg('Please input customer project requirements prior to running analysis.');
       return;
     }
     setErrorMsg(null);
@@ -106,7 +99,7 @@ export default function NewEstimatePage() {
       const req: StructuredRequirement = data.data;
       setAnalysisResult(req);
 
-      // Populate admin controls with extracted parameters
+      // Map extracted values to admin controls
       setServiceKey(req.primaryServiceKey.value || 'cloud-migration');
       setEnvironmentCode(req.environmentCode.value || 'aws');
       setScaleCode(req.scaleCode.value || '26_50');
@@ -114,7 +107,6 @@ export default function NewEstimatePage() {
       setTimelineCode(req.timelineCode.value || 'standard');
       setSelectedAddOns(req.detectedAddOnCodes.value || []);
 
-      // If active pricing exists, run deterministic calculation
       if (pricingActive) {
         triggerCalculation({
           serviceKey: req.primaryServiceKey.value || 'cloud-migration',
@@ -136,7 +128,7 @@ export default function NewEstimatePage() {
   // Step 2: Deterministic Calculation
   const triggerCalculation = async (overrideParams?: any) => {
     if (!pricingActive) {
-      setErrorMsg('Pricing is not configured. An administrator must activate a pricing configuration before estimates can be calculated.');
+      setErrorMsg('No active pricing version. Activate a configuration snapshot in Commercial Settings before calculating.');
       return;
     }
 
@@ -171,14 +163,14 @@ export default function NewEstimatePage() {
     }
   };
 
-  // Step 3: Save Estimate and Generate Proposal
+  // Step 3: Save Estimate & Proposal
   const handleSaveEstimate = async () => {
     if (!customerName.trim() || !companyName.trim()) {
       setErrorMsg('Customer name and company name are required to generate an estimate.');
       return;
     }
     if (!calculationResult) {
-      setErrorMsg('Please calculate an estimate before generating a proposal.');
+      setErrorMsg('Please run the estimate calculation before saving.');
       return;
     }
 
@@ -224,70 +216,66 @@ export default function NewEstimatePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-16">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+    <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">
+      {/* Page Title & Status */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-blue-600 uppercase tracking-wider mb-1">
-            <span>PrimeIntel Workbench</span>
-            <span>•</span>
-            <span>Production Estimation Pipeline</span>
+          <div className="text-[10px] font-mono text-ink-muted uppercase tracking-wider mb-0.5">
+            Internal Estimation Pipeline
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl font-bold text-ink tracking-tight">
             Create Project Estimate
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Input genuine customer requirements. AI extracts architectural scope; the deterministic engine produces reproducible pricing.
+          <p className="text-xs text-ink-muted mt-0.5">
+            Transform customer requirements into verified scopes and deterministic financial envelopes.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {calculationResult && (
-            <button
-              onClick={handleSaveEstimate}
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all"
-            >
-              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-              Save & Generate Proposal
-            </button>
-          )}
-        </div>
+        {calculationResult && (
+          <button
+            onClick={handleSaveEstimate}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          >
+            {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            <span>Save & Generate Proposal</span>
+          </button>
+        )}
       </div>
 
-      {/* Safety Notice if Pricing Version is Unconfigured (Section 47) */}
+      {/* System Warning if No Active Pricing */}
       {pricingActive === false && (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="p-3.5 rounded bg-accent-subtle border border-accent/30 text-accent text-xs flex items-start gap-2.5">
+          <AlertTriangle className="w-4 h-4 text-accent shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-sm">Pricing is Not Configured</span>
-            <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
-              No active pricing version is currently published in the system. An administrator must activate a pricing configuration before estimates can be generated.
+            <span className="font-semibold">Pricing Configuration Inactive</span>
+            <p className="text-accent/90 mt-0.5 leading-relaxed">
+              No active pricing baseline was found in the database. An administrator must activate a version under Commercial Settings before calculations can run.
             </p>
           </div>
         </div>
       )}
 
       {errorMsg && (
-        <div className="p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+        <div className="p-3 rounded bg-accent-subtle border border-accent/30 text-accent text-xs flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Grid: Left Column (Input & AI Review) / Right Column (Real-time Pricing & Commercials) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* LEFT COLUMN (7 Cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Customer & Account Details Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <User className="w-3.5 h-3.5 text-blue-600" />
-              1. Customer & Account Context
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Two-Column Workbench Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* LEFT COLUMN: REQUIREMENTS & ANALYSIS (7 Cols) */}
+        <div className="lg:col-span-7 space-y-5">
+          {/* Section 1: Customer Account Details */}
+          <div className="bg-surface p-4 rounded border border-border space-y-3">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-ink border-b border-border pb-1.5 flex items-center justify-between">
+              <span>1. Customer & Account Context</span>
+              <span className="text-[10px] text-ink-muted font-normal">Required for proposal</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-ink mb-1">
                   Customer Contact Name *
                 </label>
                 <input
@@ -295,12 +283,12 @@ export default function NewEstimatePage() {
                   placeholder="e.g. John Doe"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                   required
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-ink mb-1">
                   Company / Organization *
                 </label>
                 <input
@@ -308,12 +296,12 @@ export default function NewEstimatePage() {
                   placeholder="e.g. Acme Enterprises"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                   required
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-ink mb-1">
                   Email Address
                 </label>
                 <input
@@ -321,11 +309,11 @@ export default function NewEstimatePage() {
                   placeholder="contact@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-ink mb-1">
                   Phone Number
                 </label>
                 <input
@@ -333,151 +321,128 @@ export default function NewEstimatePage() {
                   placeholder="+91 ..."
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                 />
               </div>
             </div>
           </div>
 
-          {/* Natural Language Input Card */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                2. Customer Requirements
-              </h3>
-              <span className="text-[11px] text-slate-400">Natural language input</span>
+          {/* Section 2: Requirement Input */}
+          <div className="bg-surface p-4 rounded border border-border space-y-3">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-ink border-b border-border pb-1.5 flex items-center justify-between">
+              <span>2. Customer Requirement Brief</span>
+              <span className="text-[10px] text-ink-muted font-mono">Unstructured Text</span>
             </div>
 
             <textarea
               rows={6}
               value={rawRequirement}
               onChange={(e) => setRawRequirement(e.target.value)}
-              placeholder="Paste actual customer requirements, technical emails, scope briefs, or RFP specifications..."
-              className="w-full text-xs p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 leading-relaxed font-sans"
+              placeholder="Paste customer project requirements, scope emails, infrastructure summaries, RFP requirements..."
+              className="w-full p-2.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary leading-relaxed font-sans"
             />
 
-            <div className="flex items-center justify-between pt-1">
-              <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-emerald-600" />
-                Prompt-injection guarded. Fact/inference attribution enabled.
-              </p>
+            <div className="flex items-center justify-between pt-1 text-[11px]">
+              <span className="text-ink-muted">
+                Length capped (6,000 chars) • Prompt-injection shielded
+              </span>
               <button
                 type="button"
                 onClick={handleAnalyze}
                 disabled={analyzing || !rawRequirement.trim()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors disabled:opacity-50"
               >
                 {analyzing ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Analyzing Scope...
+                    <span>Analyzing Scope...</span>
                   </>
                 ) : (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Analyze Requirements
-                  </>
+                  <span>Analyze Requirements</span>
                 )}
               </button>
             </div>
           </div>
 
-          {/* AI Extracted Scope & Uncertainty Box */}
+          {/* Section 3: Structured AI Analysis (Restrained Enterprise Style) */}
           {analysisResult && (
-            <div className="bg-white p-5 rounded-xl border border-blue-100 shadow-sm space-y-5 bg-gradient-to-b from-blue-50/20 to-transparent">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
-                  3. Extracted Requirements & Confidence Badges
-                </h3>
-                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-semibold uppercase">
-                  Verified Schema
+            <div className="bg-surface p-4 rounded border border-border space-y-4">
+              <div className="border-b border-border pb-2 flex items-center justify-between">
+                <div>
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink">
+                    3. Requirement Understanding & Verification
+                  </h3>
+                  <p className="text-[11px] text-ink-muted mt-0.5">
+                    Analysis complete — structured parameters extracted with source attribution.
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-subtle border border-border text-ink font-medium">
+                  Confidence: {analysisResult.complexity.confidence}
                 </span>
               </div>
 
-              {/* Attribution Badges */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">Target Cloud</div>
-                  <div className="font-semibold text-slate-800 mt-0.5">{analysisResult.targetEnvironment.value}</div>
-                  <div className="mt-1 flex items-center gap-1">
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 font-medium">
-                      {analysisResult.targetEnvironment.source}
-                    </span>
-                    <span className="text-[9px] text-slate-400">{analysisResult.targetEnvironment.confidence} Conf.</span>
+              {/* Attribution Grid with Restrained Badges */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                <div className="p-2.5 rounded bg-subtle border border-border">
+                  <div className="text-[10px] text-ink-muted uppercase font-semibold">Target Cloud</div>
+                  <div className="font-semibold text-ink mt-0.5">{analysisResult.targetEnvironment.value}</div>
+                  <div className="text-[9px] font-mono text-ink-muted mt-1 uppercase">
+                    {analysisResult.targetEnvironment.source === 'EXPLICIT' ? 'EXPLICIT' : 'INFERRED'}
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">Workload Scale</div>
-                  <div className="font-semibold text-slate-800 mt-0.5">
+                <div className="p-2.5 rounded bg-subtle border border-border">
+                  <div className="text-[10px] text-ink-muted uppercase font-semibold">Scale</div>
+                  <div className="font-semibold text-ink mt-0.5">
                     {analysisResult.workloadCount.value ? `${analysisResult.workloadCount.value} Servers` : 'Unspecified'}
                   </div>
-                  <div className="mt-1 flex items-center gap-1">
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 font-medium">
-                      {analysisResult.workloadCount.source}
-                    </span>
-                    <span className="text-[9px] text-slate-400">{analysisResult.workloadCount.confidence} Conf.</span>
+                  <div className="text-[9px] font-mono text-ink-muted mt-1 uppercase">
+                    {analysisResult.workloadCount.source === 'EXPLICIT' ? 'EXPLICIT' : 'INFERRED'}
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">Complexity</div>
-                  <div className="font-semibold text-slate-800 mt-0.5 capitalize">{analysisResult.complexity.value}</div>
-                  <div className="mt-1 flex items-center gap-1">
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-medium">
-                      {analysisResult.complexity.source}
-                    </span>
-                    <span className="text-[9px] text-slate-400">{analysisResult.complexity.confidence} Conf.</span>
+                <div className="p-2.5 rounded bg-subtle border border-border">
+                  <div className="text-[10px] text-ink-muted uppercase font-semibold">Complexity</div>
+                  <div className="font-semibold text-ink mt-0.5 capitalize">{analysisResult.complexity.value}</div>
+                  <div className="text-[9px] font-mono text-ink-muted mt-1 uppercase">
+                    {analysisResult.complexity.source === 'EXPLICIT' ? 'EXPLICIT' : 'INFERRED'}
                   </div>
                 </div>
 
-                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                  <div className="text-[10px] text-slate-400 uppercase font-semibold">Timeline</div>
-                  <div className="font-semibold text-slate-800 mt-0.5">{analysisResult.timeline.value}</div>
-                  <div className="mt-1 flex items-center gap-1">
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 font-medium">
-                      {analysisResult.timeline.source}
-                    </span>
-                    <span className="text-[9px] text-slate-400">{analysisResult.timeline.confidence} Conf.</span>
+                <div className="p-2.5 rounded bg-subtle border border-border">
+                  <div className="text-[10px] text-ink-muted uppercase font-semibold">Timeline</div>
+                  <div className="font-semibold text-ink mt-0.5">{analysisResult.timeline.value}</div>
+                  <div className="text-[9px] font-mono text-ink-muted mt-1 uppercase">
+                    {analysisResult.timeline.source === 'EXPLICIT' ? 'EXPLICIT' : 'INFERRED'}
                   </div>
                 </div>
               </div>
 
-              {/* Missing Information & Unknowns */}
+              {/* Unknowns / Missing Information (Section 17 & 18) */}
               {analysisResult.unknowns.length > 0 && (
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-800">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                    Missing Information & Uncertainty Detection ({analysisResult.unknowns.length} Identified)
+                <div className="space-y-2 pt-1">
+                  <div className="text-[11px] font-semibold text-accent flex items-center justify-between">
+                    <span>Missing Information & Uncertainty ({analysisResult.unknowns.length} items)</span>
+                    <span className="text-[10px] font-mono text-accent">REQUIRES CONFIRMATION</span>
                   </div>
-                  <div className="space-y-2">
+
+                  <div className="space-y-1.5">
                     {analysisResult.unknowns.map((unk, idx) => (
                       <div
                         key={idx}
-                        className={`p-3 rounded-lg border text-xs ${
-                          unk.isCritical
-                            ? 'bg-amber-50/70 border-amber-200 text-amber-900'
-                            : 'bg-slate-50 border-slate-200 text-slate-700'
-                        }`}
+                        className="p-2.5 rounded bg-accent-subtle/50 border border-accent/20 text-xs space-y-1"
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="font-semibold flex items-center gap-1.5">
-                            {unk.isCritical && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
-                            )}
-                            {unk.field}
-                          </span>
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-accent">{unk.field}</span>
                           {unk.affectsPricing && (
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-amber-200/60 text-amber-900">
+                            <span className="text-[9px] font-mono uppercase px-1.5 py-0.2 rounded bg-surface border border-accent/30 text-accent font-medium">
                               Affects Pricing
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-slate-600 mt-1">{unk.description}</p>
-                        <div className="mt-2 text-[11px] bg-white/80 p-2 rounded border border-amber-100 text-slate-800">
-                          <span className="font-semibold text-blue-700">Suggested Question: </span>
+                        <p className="text-[11px] text-ink-muted">{unk.description}</p>
+                        <div className="text-[11px] bg-surface p-1.5 rounded border border-border text-ink">
+                          <span className="font-medium text-ink-muted">Suggested Question: </span>
                           &ldquo;{unk.suggestedQuestion}&rdquo;
                         </div>
                       </div>
@@ -488,423 +453,353 @@ export default function NewEstimatePage() {
             </div>
           )}
 
-          {/* Admin Human-in-the-Loop Review Panel */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          {/* Section 4: Admin Human-in-the-Loop Controls */}
+          <div className="bg-surface p-4 rounded border border-border space-y-4">
+            <div className="border-b border-border pb-2 flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-blue-600" />
-                  4. Admin Review & Parameter Adjustment
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-ink">
+                  4. Commercial Parameter Adjustments
                 </h3>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Admin is the final commercial authority. Adjust parameters to compute deterministic pricing.
+                <p className="text-[11px] text-ink-muted mt-0.5">
+                  Admin authority controls. Select parameters to recalculate deterministic pricing.
                 </p>
               </div>
+              <button
+                type="button"
+                onClick={() => triggerCalculation()}
+                disabled={calculating || !pricingActive}
+                className="text-xs font-medium text-primary hover:text-primary-hover underline"
+              >
+                Recalculate
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Primary Service Catalog
+                <label className="block text-[11px] font-medium text-ink mb-1">
+                  Primary Consulting Service
                 </label>
                 <select
                   value={serviceKey}
                   onChange={(e) => {
                     setServiceKey(e.target.value);
-                    if (pricingActive) triggerCalculation({ serviceKey: e.target.value });
+                    triggerCalculation({ serviceKey: e.target.value });
                   }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                 >
-                  {servicesCatalog.map((svc) => (
-                    <option key={svc.key} value={svc.key}>
-                      {svc.name}
+                  {servicesCatalog.map((s) => (
+                    <option key={s.key} value={s.key}>
+                      {s.name} ({formatCurrency(s.basePrice)})
                     </option>
                   ))}
                   {servicesCatalog.length === 0 && (
-                    <option value="cloud-migration">Cloud Infrastructure Migration</option>
+                    <option value="cloud-migration">Cloud Migration</option>
                   )}
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Target Environment
+                <label className="block text-[11px] font-medium text-ink mb-1">
+                  Target Infrastructure
                 </label>
                 <select
                   value={environmentCode}
                   onChange={(e) => {
                     setEnvironmentCode(e.target.value);
-                    if (pricingActive) triggerCalculation({ environmentCode: e.target.value });
+                    triggerCalculation({ environmentCode: e.target.value });
                   }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                 >
-                  <option value="aws">Amazon Web Services (AWS)</option>
-                  <option value="azure">Microsoft Azure</option>
-                  <option value="gcp">Google Cloud Platform (GCP)</option>
-                  <option value="hybrid">Hybrid / Multi-Cloud</option>
-                  <option value="on_premise">Private Cloud / On-Premise</option>
+                  <option value="aws">AWS (Baseline 1.00×)</option>
+                  <option value="azure">Azure (1.05×)</option>
+                  <option value="gcp">GCP (1.05×)</option>
+                  <option value="hybrid">Hybrid / Multi-Cloud (1.30×)</option>
+                  <option value="on-prem">Private / On-Premise (1.15×)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-ink mb-1">
                   Workload Scale
                 </label>
                 <select
                   value={scaleCode}
                   onChange={(e) => {
                     setScaleCode(e.target.value);
-                    if (pricingActive) triggerCalculation({ scaleCode: e.target.value });
+                    triggerCalculation({ scaleCode: e.target.value });
                   }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                 >
-                  <option value="1_10">1 – 10 Workloads / VMs</option>
-                  <option value="11_25">11 – 25 Workloads / VMs</option>
-                  <option value="26_50">26 – 50 Workloads / VMs</option>
-                  <option value="51_100">51 – 100 Workloads / VMs</option>
-                  <option value="101_plus">101+ Workloads / Hyperscale</option>
+                  <option value="scale_1_10">1 – 10 Workloads (1.00×)</option>
+                  <option value="scale_11_25">11 – 25 Workloads (1.25×)</option>
+                  <option value="scale_26_50">26 – 50 Workloads (1.60×)</option>
+                  <option value="scale_51_100">51 – 100 Workloads (2.10×)</option>
+                  <option value="scale_100_plus">100+ Workloads (2.80×)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  Technical Complexity
+                <label className="block text-[11px] font-medium text-ink mb-1">
+                  Project Complexity
                 </label>
                 <select
                   value={complexityCode}
                   onChange={(e) => {
                     setComplexityCode(e.target.value);
-                    if (pricingActive) triggerCalculation({ complexityCode: e.target.value });
+                    triggerCalculation({ complexityCode: e.target.value });
                   }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                 >
-                  <option value="low">Low (Standard lift-and-shift)</option>
-                  <option value="medium">Medium (Standard multi-tier)</option>
-                  <option value="high">High (Complex clustering & networks)</option>
-                  <option value="enterprise">Enterprise (Mission-critical, zero downtime)</option>
+                  <option value="low">Low Complexity (0.85×)</option>
+                  <option value="medium">Medium Standard (1.00×)</option>
+                  <option value="high">High Complexity (1.35×)</option>
+                  <option value="enterprise">Mission-Critical Enterprise (1.75×)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                <label className="block text-[11px] font-medium text-ink mb-1">
                   Timeline Urgency
                 </label>
                 <select
                   value={timelineCode}
                   onChange={(e) => {
                     setTimelineCode(e.target.value);
-                    if (pricingActive) triggerCalculation({ timelineCode: e.target.value });
+                    triggerCalculation({ timelineCode: e.target.value });
                   }}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 font-medium text-slate-800 bg-white"
+                  className="w-full px-2.5 py-1.5 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                 >
-                  <option value="flexible">Flexible (&gt; 12 weeks)</option>
-                  <option value="standard">Standard (8 – 12 weeks)</option>
-                  <option value="accelerated">Accelerated (4 – 7 weeks)</option>
-                  <option value="urgent">Urgent (&lt; 4 weeks)</option>
+                  <option value="flexible">Flexible (0.95×)</option>
+                  <option value="standard">Standard 8–12 wks (1.00×)</option>
+                  <option value="accelerated">Accelerated 4–6 wks (1.20×)</option>
+                  <option value="urgent">Urgent &lt; 4 wks (1.45×)</option>
                 </select>
               </div>
             </div>
 
-            {/* Technical Add-ons Checklist */}
-            <div className="pt-2">
-              <label className="block text-[11px] font-semibold text-slate-700 mb-2">
-                Technical Modules & Add-Ons
+            {/* Add-ons Checkboxes */}
+            <div className="space-y-2 pt-2 border-t border-border">
+              <label className="block text-[11px] font-semibold text-ink uppercase tracking-wider">
+                Technical Add-Ons & Architectural Modules
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {[
                   { code: 'ha', name: 'High Availability (Multi-AZ)' },
                   { code: 'dr', name: 'Disaster Recovery (Cross-Region)' },
-                  { code: 'terraform', name: 'Infrastructure as Code (Terraform)' },
-                  { code: 'cicd', name: 'CI/CD Deployment Pipelines' },
-                  { code: 'monitoring', name: 'Observability & Monitoring' },
-                  { code: 'security_hardening', name: 'Security Hardening & CIS Benchmarks' },
-                  { code: 'support_24_7', name: '24/7 Managed Support Setup' },
-                  { code: 'backup_automation', name: 'Automated Snapshot Policies' },
-                  { code: 'kubernetes', name: 'Kubernetes Platform Setup' },
+                  { code: 'terraform', name: 'IaC (Terraform / OpenTofu)' },
+                  { code: 'cicd', name: 'Automated CI/CD Pipelines' },
+                  { code: 'monitoring', name: 'Centralized Monitoring' },
+                  { code: 'security', name: 'Security Hardening' },
+                  { code: 'support_24_7', name: '24/7 Managed Support Handover' },
+                  { code: 'k8s', name: 'Kubernetes / Container Orchestration' },
                 ].map((addon) => {
-                  const isChecked = selectedAddOns.includes(addon.code);
+                  const checked = selectedAddOns.includes(addon.code);
                   return (
                     <label
                       key={addon.code}
-                      onClick={() => toggleAddOn(addon.code)}
-                      className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-all ${
-                        isChecked
-                          ? 'bg-blue-50/80 border-blue-300 text-blue-900 font-medium'
-                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors ${
+                        checked ? 'bg-primary-subtle border-primary/40 text-primary font-medium' : 'bg-surface border-border text-ink hover:bg-subtle'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-4 h-4 rounded border flex items-center justify-center ${
-                            isChecked ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
-                          }`}
-                        >
-                          {isChecked && <Check className="w-3 h-3" />}
-                        </div>
-                        <span className="text-[11px]">{addon.name}</span>
-                      </div>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleAddOn(addon.code)}
+                        className="rounded text-primary focus:ring-primary w-3.5 h-3.5"
+                      />
+                      <span className="text-xs truncate">{addon.name}</span>
                     </label>
                   );
                 })}
               </div>
             </div>
-
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => triggerCalculation()}
-                disabled={calculating || !pricingActive}
-                className="w-full py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-2"
-              >
-                {calculating ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    Calculating Estimate...
-                  </>
-                ) : (
-                  <>
-                    <Calculator className="w-3.5 h-3.5" />
-                    Calculate Deterministic Estimate
-                  </>
-                )}
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* RIGHT COLUMN (5 Cols): Real-Time Estimate & Commercials */}
-        <div className="lg:col-span-5 space-y-6 sticky top-6">
-          {/* Main Indicative Range Card */}
-          <div className="bg-slate-900 text-white p-6 rounded-2xl shadow-lg border border-slate-800 space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        {/* RIGHT COLUMN: FINANCIAL & ESTIMATION WORKSPACE (5 Cols) */}
+        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-4">
+          <div className="bg-surface rounded border border-border p-4 space-y-4">
+            <div className="border-b border-border pb-2 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">
-                  Indicative Commercial Range
-                </span>
-                <div className="text-2xl font-bold font-mono tracking-tight text-white mt-1">
-                  {calculationResult ? (
-                    formatCurrencyRange(
-                      calculationResult.indicativeLow,
-                      calculationResult.indicativeHigh
-                    )
-                  ) : (
-                    <span className="text-slate-500">Awaiting Calculation</span>
-                  )}
-                </div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
+                  Deterministic Calculation
+                </h3>
+                <p className="text-[10px] text-ink-muted">
+                  Version: {activeVersionName || 'Active'}
+                </p>
               </div>
-
-              <div className="text-right">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Estimated Timeline</span>
-                <div className="font-semibold text-slate-200 text-xs mt-1">
-                  {calculationResult?.timelineWeeks.label || '—'}
-                </div>
-              </div>
+              {calculating && <RefreshCw className="w-3.5 h-3.5 animate-spin text-ink-muted" />}
             </div>
 
-            {/* Benchmark vs PrimeCore Price Grid */}
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
-                <div className="text-[10px] text-slate-400 uppercase font-semibold">
-                  Market Benchmark
-                </div>
-                <div className="font-mono font-semibold text-slate-200 mt-1">
-                  {calculationResult?.benchmarkComparison?.benchmarkFound ? (
-                    formatCurrencyRange(
-                      calculationResult.benchmarkComparison.benchmarkLow!,
-                      calculationResult.benchmarkComparison.benchmarkHigh!,
-                      calculationResult.benchmarkComparison.currency
-                    )
-                  ) : (
-                    <span className="text-slate-400 text-[11px]">Benchmark Unavailable</span>
-                  )}
-                </div>
-                <div className="text-[9px] text-slate-400 mt-1 truncate">
-                  {calculationResult?.benchmarkComparison?.sourceName || 'No verified source'}
-                </div>
-              </div>
+            {calculationResult ? (
+              <div className="space-y-4">
+                {/* Financial Statement Line Items */}
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between py-1 text-ink-muted">
+                    <span>Base Service Scope</span>
+                    <span className="font-mono text-ink tabular-nums">
+                      {formatCurrency(calculationResult.service.basePrice)}
+                    </span>
+                  </div>
 
-              <div className="bg-slate-800/80 p-3 rounded-xl border border-blue-500/30">
-                <div className="text-[10px] text-blue-400 uppercase font-semibold">
-                  PrimeCore Recommended
-                </div>
-                <div className="font-mono font-bold text-blue-300 mt-1">
-                  {calculationResult
-                    ? formatCurrency(calculationResult.primeCoreRecommendedPrice)
-                    : '—'}
-                </div>
-                <div className="text-[9px] text-emerald-400 mt-1">
-                  {calculationResult?.discount.totalDiscountAmount
-                    ? `Discount applied (${formatCurrency(calculationResult.discount.totalDiscountAmount)})`
-                    : 'Standard Catalog Rate'}
-                </div>
-              </div>
-            </div>
+                  <div className="flex justify-between py-1 text-ink-muted">
+                    <span>Multipliers Compound</span>
+                    <span className="font-mono text-ink tabular-nums">
+                      {(
+                        calculationResult.factors.environment.multiplier *
+                        calculationResult.factors.scale.multiplier *
+                        calculationResult.factors.complexity.multiplier *
+                        calculationResult.factors.timeline.multiplier
+                      ).toFixed(2)}×
+                    </span>
+                  </div>
 
-            {/* Commercial Adjustments & Discount Engine */}
-            <div className="space-y-4 pt-2 border-t border-slate-800">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-300">Commercial Discount (%)</span>
-                <span className="font-mono text-blue-400 font-bold">{discountPercent}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="25"
-                step="1"
-                value={discountPercent}
-                onChange={(e) => {
-                  const val = Number(e.target.value);
-                  setDiscountPercent(val);
-                  if (pricingActive) triggerCalculation({ discountPercentage: val });
-                }}
-                className="w-full accent-blue-500"
-              />
-              <div className="flex justify-between text-[10px] text-slate-500">
-                <span>0% Standard</span>
-                <span className="text-amber-400 font-medium">Policy Cap: 20%</span>
-                <span>25%</span>
-              </div>
+                  <div className="flex justify-between py-1 text-ink-muted">
+                    <span>Scaled Service Base</span>
+                    <span className="font-mono text-ink tabular-nums">
+                      {formatCurrency(calculationResult.scaledBasePrice)}
+                    </span>
+                  </div>
 
-              {discountPercent > 20 && (
-                <div className="p-2 rounded bg-amber-950/40 border border-amber-800 text-amber-300 text-[11px] flex items-center gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                  <span>Discount exceeds 20% policy cap. Engine strictly clamps to 20%.</span>
+                  {calculationResult.addOns.map((addon) => (
+                    <div key={addon.name} className="flex justify-between py-1 text-ink-muted">
+                      <span className="truncate pr-2">+ {addon.name}</span>
+                      <span className="font-mono text-ink tabular-nums">
+                        {formatCurrency(addon.calculatedAmount)}
+                      </span>
+                    </div>
+                  ))}
+
+                  <div className="border-t border-border pt-2 flex justify-between font-semibold text-ink">
+                    <span>Subtotal</span>
+                    <span className="font-mono tabular-nums">
+                      {formatCurrency(calculationResult.subtotal)}
+                    </span>
+                  </div>
+
+                  {/* Discount Controls */}
+                  <div className="py-2 border-t border-border space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-ink">Commercial Discount</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min="0"
+                          max={calculationResult.discount.maxAllowedPercentage || 20}
+                          value={discountPercent}
+                          onChange={(e) => {
+                            const val = Number(e.target.value);
+                            setDiscountPercent(val);
+                            triggerCalculation({ discountPercentage: val });
+                          }}
+                          className="w-14 px-1.5 py-0.5 rounded border border-border text-right font-mono text-xs focus:outline-none focus:border-primary"
+                        />
+                        <span className="text-ink-muted font-mono text-xs">%</span>
+                      </div>
+                    </div>
+
+                    {discountPercent > 0 && (
+                      <div className="flex justify-between text-[11px] text-accent">
+                        <span>Discount Deduction</span>
+                        <span className="font-mono tabular-nums">
+                          -{formatCurrency(calculationResult.discount.totalDiscountAmount)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Final Calculation Banner */}
+                  <div className="p-3 rounded bg-subtle border border-border space-y-2">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-xs font-semibold text-ink uppercase tracking-wider">
+                        PrimeCore Recommended
+                      </span>
+                      <span className="text-lg font-bold text-ink font-mono tabular-nums">
+                        {formatCurrency(calculationResult.finalPrice)}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[11px] text-ink-muted border-t border-border/60 pt-1.5">
+                      <span>Indicative Envelope</span>
+                      <span className="font-mono font-medium text-ink tabular-nums">
+                        {formatCurrencyRange(calculationResult.indicativeLow, calculationResult.indicativeHigh)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              {/* Admin Price Override */}
-              <div className="pt-2">
-                <label className="block text-[11px] font-semibold text-slate-300 mb-1">
-                  Manual Final Override (INR) — Requires Justification
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    placeholder="Enter custom final amount..."
-                    value={adminOverridePrice}
-                    onChange={(e) => {
-                      setAdminOverridePrice(e.target.value);
-                      if (pricingActive) triggerCalculation({ adminOverridePrice: e.target.value });
-                    }}
-                    className="flex-1 text-xs px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                {/* Market Benchmark Side-by-Side (Section 19) */}
+                {calculationResult.benchmarkComparison && calculationResult.benchmarkComparison.benchmarkFound && (
+                  <div className="p-3 rounded bg-surface border border-border space-y-2 text-xs">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-ink-muted flex items-center justify-between">
+                      <span>Market Benchmark</span>
+                      <span className="font-mono text-[9px] text-primary">Verified</span>
+                    </div>
+
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-ink-muted">Industry Reference Range</span>
+                      <span className="font-mono font-semibold text-ink tabular-nums">
+                        {formatCurrencyRange(
+                          calculationResult.benchmarkComparison.benchmarkLow || 0,
+                          calculationResult.benchmarkComparison.benchmarkHigh || 0,
+                          calculationResult.benchmarkComparison.currency
+                        )}
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] text-ink-muted">
+                      Source: {calculationResult.benchmarkComparison.sourceName || 'Verified Reference'} • Positioning:{' '}
+                      <span className="font-semibold text-primary">
+                        {calculationResult.benchmarkComparison.varianceVsRecommended || 'Aligned'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Internal Notes / Margin Analysis */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-[11px] font-medium text-ink">
+                    Internal Commercial Notes (Confidential)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={internalNotes}
+                    onChange={(e) => setInternalNotes(e.target.value)}
+                    placeholder="Document margin assumptions, risk mitigations, or internal notes..."
+                    className="w-full p-2 rounded border border-border bg-surface text-ink text-xs focus:outline-none focus:border-primary"
                   />
                 </div>
-                {adminOverridePrice && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      placeholder="Mandatory Reason: e.g. Contractual Strategic Concession"
-                      value={overrideReason}
-                      onChange={(e) => setOverrideReason(e.target.value)}
-                      className="w-full text-xs px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 placeholder-slate-500 focus:outline-none"
-                      required
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
 
-            {/* Save Action */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleSaveEstimate}
-                disabled={saving || !calculationResult}
-                className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {saving ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Recording Proposal...
-                  </>
-                ) : (
-                  <>
-                    Save Estimate & Review Proposal
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </div>
+                {/* Primary Action Button */}
+                <button
+                  type="button"
+                  onClick={handleSaveEstimate}
+                  disabled={saving}
+                  className="w-full py-2.5 rounded bg-primary hover:bg-primary-hover text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving Estimate...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Save & Generate Proposal</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-ink-muted text-xs">
+                <FileText className="w-8 h-8 text-ink-faint mx-auto mb-2" />
+                <div className="font-medium text-ink">Awaiting Calculation</div>
+                <p className="text-[11px] text-ink-muted max-w-xs mx-auto mt-1">
+                  Input customer requirements on the left and click &ldquo;Analyze Requirements&rdquo; or select parameters to calculate.
+                </p>
+              </div>
+            )}
           </div>
-
-          {/* Internal Line-Item Calculation Breakdown */}
-          {calculationResult && (
-            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3 text-xs">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h4 className="font-bold text-slate-800 uppercase tracking-wider text-[11px]">
-                  Internal Calculation Breakdown
-                </h4>
-                <span className="font-mono text-[10px] text-slate-400">
-                  {calculationResult.pricingVersion}
-                </span>
-              </div>
-
-              <div className="space-y-1.5 text-slate-600 font-mono text-[11px]">
-                <div className="flex justify-between">
-                  <span>Base Service Fee:</span>
-                  <span className="font-semibold text-slate-800">
-                    {formatCurrency(calculationResult.service.basePrice)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>
-                    Environment ({calculationResult.factors.environment.label}):
-                  </span>
-                  <span>×{calculationResult.factors.environment.multiplier}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Scale ({calculationResult.factors.scale.label}):</span>
-                  <span>×{calculationResult.factors.scale.multiplier}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>
-                    Complexity ({calculationResult.factors.complexity.label}):
-                  </span>
-                  <span>×{calculationResult.factors.complexity.multiplier}</span>
-                </div>
-                <div className="flex justify-between text-slate-500">
-                  <span>Timeline ({calculationResult.factors.timeline.label}):</span>
-                  <span>×{calculationResult.factors.timeline.multiplier}</span>
-                </div>
-
-                <div className="flex justify-between pt-1 border-t border-slate-100 text-slate-800 font-medium">
-                  <span>Scaled Infrastructure Base:</span>
-                  <span>{formatCurrency(calculationResult.scaledBasePrice)}</span>
-                </div>
-
-                {calculationResult.addOns.map((item) => (
-                  <div key={item.code} className="flex justify-between text-slate-500">
-                    <span>+ {item.name}:</span>
-                    <span>{formatCurrency(item.calculatedAmount)}</span>
-                  </div>
-                ))}
-
-                <div className="flex justify-between pt-1 border-t border-slate-200 font-bold text-slate-900">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(calculationResult.subtotal)}</span>
-                </div>
-
-                {calculationResult.discount.totalDiscountAmount > 0 && (
-                  <div className="flex justify-between text-emerald-600 font-medium">
-                    <span>Discount ({calculationResult.discount.requestedPercentage}%):</span>
-                    <span>-{formatCurrency(calculationResult.discount.totalDiscountAmount)}</span>
-                  </div>
-                )}
-
-                {calculationResult.adminOverride && (
-                  <div className="flex justify-between text-blue-600 font-medium">
-                    <span>Admin Override:</span>
-                    <span>{formatCurrency(calculationResult.adminOverride.overridePrice)}</span>
-                  </div>
-                )}
-
-                <div className="flex justify-between pt-2 border-t-2 border-slate-800 font-bold text-slate-900 text-xs">
-                  <span>Final Calculated:</span>
-                  <span className="text-blue-700">{formatCurrency(calculationResult.finalPrice)}</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'PrimeIntel — Internal Project Estimation Engine',
-  description: 'Enterprise AI requirement extraction and deterministic project pricing engine for PrimeCore',
+  description: 'Enterprise project estimation intelligence and deterministic pricing engine for PrimeCore',
 };
 
 export default function RootLayout({
@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased font-sans">
+      <body className="min-h-screen bg-canvas text-ink antialiased font-sans selection:bg-primary-subtle selection:text-primary">
         {children}
       </body>
     </html>

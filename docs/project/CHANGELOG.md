@@ -2,6 +2,31 @@
 
 All notable changes to the PrimeIntel Internal Project Estimation Engine are documented here.
 
+## [1.2.0] - 2026-10-05
+### Added
+- Enterprise B2B Design System with custom color tokens:
+  - Deep Green (`#174D38`) as primary brand/action and active navigation accent.
+  - Rich Brown / Burgundy (`#4D1717`) as secondary alert and critical status accent.
+  - Cool Gray (`#CBCBCB`) as structural border, divider, and table border color.
+  - Off White (`#F2F2F2`) as neutral canvas background.
+- Two-column estimation workbench on desktop for `/admin/estimates/new`:
+  - Left column: Customer context, brief input, structured AI understanding, and human-in-the-loop parameter controls.
+  - Right column: Sticky financial calculation sheet with vertically aligned numbers, benchmark comparisons, and proposal save action.
+- Dedicated design system documentation in `docs/project/UI_UX.md`.
+- Tabular figures numeric styling (`tabular-nums`) for currency and metrics.
+
+### Changed
+- Redesigned all 10 application views (`/admin`, `/admin/estimates`, `/admin/estimates/new`, `/admin/estimates/[id]`, `/admin/pricing`, `/admin/benchmarks`, `/admin/leads`, `/admin/audit`, `/admin/settings`, `/admin/login`).
+- Consolidated navigation sidebar to a compact (`w-56`), stable, quiet enterprise layout with 4 functional groups (*Workspace*, *Commercial*, *Governance*, *System*).
+- Streamlined top bar to minimal breadcrumbs and environment context.
+- Transformed market benchmarks (`/admin/benchmarks`) and estimates (`/admin/estimates`) into high-density structured tables instead of card grids.
+- Refactored status badges into disciplined semantic palette (Green for Approved/Verified, Brown for Alerts/Warnings, Gray for Drafts).
+
+### Removed
+- Removed generic SaaS/starter-kit aesthetics, dark blue hero cards, glowing gradients, and bouncy animations.
+- Removed chat-like AI patterns and avatars in favor of structured enterprise analysis reporting.
+- Eliminated excessive border radii (`rounded-2xl`, `rounded-full`) across all screens.
+
 ## [1.1.0] - 2026-10-05
 ### Added
 - Enterprise authentication using Node.js salted scrypt password hashing (`crypto.scryptSync`) and timing-safe verification (`crypto.timingSafeEqual`).

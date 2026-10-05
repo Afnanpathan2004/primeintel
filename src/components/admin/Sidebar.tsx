@@ -11,94 +11,119 @@ import {
   BarChart3,
   History,
   Settings,
-  Shield,
-  Activity,
 } from 'lucide-react';
 
-const navigation = [
-  { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-  { name: 'New Estimate', href: '/admin/estimates/new', icon: Calculator, highlight: true },
-  { name: 'Estimates', href: '/admin/estimates', icon: FileSpreadsheet },
-  { name: 'Leads & Pipeline', href: '/admin/leads', icon: Users },
-  { name: 'Pricing & Services', href: '/admin/pricing', icon: Sliders },
-  { name: 'Market Benchmarks', href: '/admin/benchmarks', icon: BarChart3 },
-  { name: 'Audit Governance', href: '/admin/audit', icon: History },
-  { name: 'System Settings', href: '/admin/settings', icon: Settings },
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    title: 'Workspace',
+    items: [
+      { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+      { name: 'Estimates', href: '/admin/estimates', icon: FileSpreadsheet },
+      { name: 'New Estimate', href: '/admin/estimates/new', icon: Calculator },
+      { name: 'Leads & Pipeline', href: '/admin/leads', icon: Users },
+    ],
+  },
+  {
+    title: 'Commercial',
+    items: [
+      { name: 'Pricing Rules', href: '/admin/pricing', icon: Sliders },
+      { name: 'Market Benchmarks', href: '/admin/benchmarks', icon: BarChart3 },
+    ],
+  },
+  {
+    title: 'Governance',
+    items: [
+      { name: 'Audit Logs', href: '/admin/audit', icon: History },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      { name: 'Settings', href: '/admin/settings', icon: Settings },
+    ],
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 bg-slate-900 border-r border-slate-800 text-slate-300 flex flex-col shrink-0 no-print">
+    <aside className="w-56 bg-surface border-r border-border flex flex-col shrink-0 no-print">
       {/* Brand Header */}
-      <div className="h-16 flex items-center px-6 border-b border-slate-800 gap-3">
-        <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold tracking-tight shadow-md">
+      <div className="h-14 flex items-center px-4 border-b border-border gap-2.5">
+        <div className="w-7 h-7 rounded bg-primary flex items-center justify-center text-white font-bold text-xs tracking-tight shrink-0">
           PI
         </div>
-        <div>
-          <div className="font-semibold text-white text-sm tracking-wide">
+        <div className="min-w-0">
+          <div className="font-semibold text-ink text-xs tracking-tight truncate">
             PrimeIntel
           </div>
-          <div className="text-[11px] text-blue-400 font-medium uppercase tracking-wider flex items-center gap-1">
-            Estimation Platform
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          <div className="text-[10px] text-ink-muted leading-tight truncate">
+            Estimation Intelligence
           </div>
         </div>
       </div>
 
-      {/* Internal Security Badge */}
-      <div className="px-4 py-3 border-b border-slate-800/80 bg-slate-950/40">
-        <div className="flex items-start gap-2 bg-slate-800/60 rounded-md p-2 text-[11px] text-slate-400 border border-slate-700/50">
-          <Shield className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-semibold text-slate-300">Internal Admin System</span>
-            <p className="text-[10px] text-slate-500 mt-0.5">Air-gapped from primecoreinfo.com. Deterministic pricing rules.</p>
-          </div>
-        </div>
+      {/* Internal System Mode Indicator */}
+      <div className="px-3 py-2 bg-subtle border-b border-border text-[10px] text-ink-muted flex items-center justify-between">
+        <span className="font-medium">System Mode</span>
+        <span className="font-mono text-[9px] text-primary font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary-subtle border border-primary/20">
+          Internal
+        </span>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navigation.map((item) => {
-          const isActive =
-            item.href === '/admin'
-              ? pathname === '/admin'
-              : pathname.startsWith(item.href);
+      {/* Navigation Groups */}
+      <nav className="flex-1 px-2 py-3 space-y-4 overflow-y-auto">
+        {navSections.map((section) => (
+          <div key={section.title} className="space-y-0.5">
+            <div className="px-2.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-ink-muted">
+              {section.title}
+            </div>
+            {section.items.map((item) => {
+              const isActive =
+                item.href === '/admin'
+                  ? pathname === '/admin'
+                  : pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href) && (item.href !== '/admin/estimates' || pathname === '/admin/estimates' || pathname.startsWith('/admin/estimates/')));
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : item.highlight
-                  ? 'text-blue-400 hover:bg-slate-800/80 hover:text-white border border-blue-500/20'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-              }`}
-            >
-              <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : item.highlight ? 'text-blue-400' : 'text-slate-400'}`} />
-              <span className="flex-1">{item.name}</span>
-              {item.highlight && !isActive && (
-                <span className="px-1.5 py-0.5 rounded text-[9px] bg-blue-500/20 text-blue-300 font-semibold uppercase tracking-wider">
-                  New
-                </span>
-              )}
-            </Link>
-          );
-        })}
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'bg-primary text-white font-semibold'
+                      : 'text-ink hover:bg-subtle hover:text-ink'
+                  }`}
+                >
+                  <item.icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-ink-muted'}`} />
+                  <span className="truncate">{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      {/* Footer Info */}
-      <div className="p-4 border-t border-slate-800 text-[11px] text-slate-500 space-y-1">
-        <div className="flex items-center justify-between text-slate-400">
-          <span>Environment</span>
-          <span className="font-mono text-emerald-400 font-medium">Production Hardened</span>
+      {/* Footer Meta */}
+      <div className="p-3 border-t border-border bg-subtle text-[10px] text-ink-muted space-y-1">
+        <div className="flex items-center justify-between">
+          <span>Engine</span>
+          <span className="font-mono text-ink font-medium">Deterministic</span>
         </div>
         <div className="flex items-center justify-between">
-          <span>AI Engine</span>
-          <span className="text-blue-400">Gemini 3.8 Flash</span>
+          <span>Environment</span>
+          <span className="font-mono text-primary font-medium">Production Eval</span>
         </div>
       </div>
     </aside>
