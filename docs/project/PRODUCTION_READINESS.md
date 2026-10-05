@@ -23,7 +23,7 @@ The technical codebase is **100% READY** and verified (17/17 automated tests pas
 | **Business Data** | Demo scenarios UI | `READY` | Removed sample scenario buttons (`40 Servers AWS Migration`, `70 Physical Servers`) from `/admin/estimates/new`. |
 | **Business Data** | Seeding safeguards | `READY` | `prisma/seed.js` and `seed-sample-estimate.js` enforce `if (process.env.NODE_ENV === 'production') process.exit(0)`. |
 | **Database** | Relational integrity | `READY` | Models defined for `User`, `Session`, `Service`, `PricingMultiplier`, `AddOn`, `MarketBenchmark`, `PricingVersion`, `Estimate`, `EstimateRevision`, and `AuditLog`. |
-| **Database** | Production DB target | `PARTIAL` | Architecture supports PostgreSQL via Prisma provider switch. SQLite is maintained for local verification. |
+| **Database** | Production DB target | `READY` | Migrated to PostgreSQL with Prisma ORM. Production query indexes applied across 8 tables. Automated migration pipeline (`prisma migrate deploy`). Server components protected with `<DatabaseErrorState />`. SQLite eliminated. |
 | **Security** | Password hashing | `READY` | Salted scrypt hashing via Node.js native `crypto.scryptSync` (N=16384, r=8, p=1, 64-byte key) with `crypto.timingSafeEqual`. |
 | **Security** | Session management | `READY` | 64-byte cryptographically secure random session tokens, database-backed `Session` table, 7-day expiration, and HTTP-only SameSite=Lax cookies. |
 | **Security** | Role-Based Access Control | `READY` | `SUPER_ADMIN`, `ADMIN`, `ESTIMATOR`, and `VIEWER` roles enforced at API routes and server actions. |

@@ -5,12 +5,20 @@ import {
   Database,
   CheckCircle2,
 } from 'lucide-react';
+import DatabaseErrorState from '@/components/admin/DatabaseErrorState';
 
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
-  const [activeVersion, estimateCount, serviceCount, multiplierCount, addOnCount, userCount] =
-    await Promise.all([
+  let activeVersion = null;
+  let estimateCount = 0;
+  let serviceCount = 0;
+  let multiplierCount = 0;
+  let addOnCount = 0;
+  let userCount = 0;
+
+  try {
+    const results = await Promise.all([
       prisma.pricingVersion.findFirst({ where: { status: 'ACTIVE' } }),
       prisma.estimate.count(),
       prisma.service.count(),
@@ -18,6 +26,20 @@ export default async function SettingsPage() {
       prisma.addOn.count(),
       prisma.user.count(),
     ]);
+    activeVersion = results[0];
+    estimateCount = results[1];
+    serviceCount = results[2];
+    multiplierCount = results[3];
+    addOnCount = results[4];
+    userCount = results[5];
+  } catch (err: any) {
+    console.error('[SettingsPage] Database query failure:', err?.message || err);
+    return (
+      <div className="max-w-5xl mx-auto space-y-6 pb-20 font-sans">
+        <DatabaseErrorState />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-20 font-sans">

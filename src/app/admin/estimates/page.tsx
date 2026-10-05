@@ -6,16 +6,27 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { formatCurrency, formatCurrencyRange } from '@/lib/currency';
+import DatabaseErrorState from '@/components/admin/DatabaseErrorState';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EstimatesListPage() {
-  const estimates = await prisma.estimate.findMany({
-    orderBy: { createdAt: 'desc' },
-    include: {
-      pricingVersion: { select: { version: true } },
-    },
-  });
+  let estimates: any[] = [];
+  try {
+    estimates = await prisma.estimate.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        pricingVersion: { select: { version: true } },
+      },
+    });
+  } catch (err: any) {
+    console.error('[EstimatesListPage] Database query failure:', err?.message || err);
+    return (
+      <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">
+        <DatabaseErrorState />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">

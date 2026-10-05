@@ -2,6 +2,18 @@
 
 All notable changes to the PrimeIntel Internal Project Estimation Engine are documented here.
 
+## [1.3.0] - 2026-10-05
+### Added
+- Managed PostgreSQL migration from local SQLite.
+- PostgreSQL Prisma schema migration (`prisma/migrations/20261005085832_init_postgresql/migration.sql`).
+- Dedicated high-performance query indexes on `Estimate` (`status`, `createdAt`, `companyName`), `MarketBenchmark` (`serviceKey, status`, `status`), `PricingVersion` (`status`), `AuditLog` (`createdAt`, `entity, entityId`), `Session` (`userId`, `expiresAt`), `Service` (`active`), `PricingMultiplier` (`category`), and `AddOn` (`pricingType`).
+- Enterprise `<DatabaseErrorState />` graceful fallback UI with `/api/health` diagnostic links and retry trigger across all server views (`/admin`, `/admin/estimates`, `/admin/leads`, `/admin/audit`, `/admin/settings`).
+- Automated Vercel migration deployment pipeline (`vercel-build` / `prisma migrate deploy`).
+- Comprehensive production deployment, backup lifecycle, and rollback documentation in `docs/project/DEPLOYMENT.md`.
+
+### Removed
+- Eliminated local `prisma/dev.db` SQLite database file and references from production build paths.
+
 ## [1.2.0] - 2026-10-05
 ### Added
 - Enterprise B2B Design System with custom color tokens:

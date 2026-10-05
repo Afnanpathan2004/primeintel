@@ -3,7 +3,7 @@
 ## Architectural Boundaries
 
 ```
-[ Admin UI (Next.js 16 App Router / Tailwind / Lucide) ]
+[ Admin UI (Next.js 14 App Router / Tailwind / Lucide) ]
                    │
                    ▼ (Server Actions / Typed Internal API)
 ┌────────────────────────────────────────────────────────┐
@@ -19,7 +19,7 @@
 ┌────────────────────────┐    ┌───────────────────────────┐
 │  Requirement Analyzer  │    │ Deterministic Pricing     │
 │  - Interface Abstraction│   │ Engine (Pure TypeScript)  │
-│  - Gemini 3.8 Flash    │    │  - Base Services          │
+│  - Gemini 1.5/Flash    │    │  - Base Services          │
 │  - Schema Validation   │    │  - Complexity Multipliers │
 │  - Prompt-Injection Tag │   │  - Workload Scales        │
 │  - Heuristic Fallback  │    │  - Add-ons (Fixed/Perc)   │
@@ -33,9 +33,10 @@
                               ┌───────────────────────────┐
                               │  Persistence Layer        │
                               │  - Prisma ORM             │
+                              │  - Managed PostgreSQL     │
+                              │  - Connection Pooler      │
+                              │  - Production Query Index │
                               │  - Atomic Transactions    │
-                              │  - SQLite (Local Dev/MVP) │
-                              │  - PostgreSQL Ready       │
                               │  - Estimate Revisions     │
                               │  - Audit Logs             │
                               └───────────────────────────┘
@@ -51,4 +52,4 @@
    - Internal View: Shows complete cost build-up, benchmark deviations, applied discount percentages, and internal risk notes.
    - Customer-Safe Proposal View: Omits raw margins, internal discount mechanisms, and confidential benchmark datasets.
 6. **Domain Currency Engine**: `src/lib/currency.ts` centralizes all currency representation across the system, guaranteeing consistent Indian numbering notation (Lakhs/Crores) and ISO compliance.
-7. **Database Migration Readiness**: Prisma ORM abstracts the storage layer. Transitioning from SQLite to PostgreSQL requires updating the `provider` in `prisma/schema.prisma` and deploying migrations.
+7. **Production PostgreSQL Architecture**: Persistent storage is powered by managed PostgreSQL (Supabase, Neon, AWS RDS) with Prisma ORM. Production queries utilize dedicated performance indexes on status, dates, and lookups. Server components are fortified with `<DatabaseErrorState />` graceful fallbacks during network degradation. SQLite is completely decoupled and eliminated from production builds.

@@ -1,5 +1,5 @@
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -20,6 +20,8 @@ model User {
   sessions           Session[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
+
+  @@index([role])
 }
 
 model Session {
@@ -29,6 +31,9 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime
   createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Service {
@@ -42,6 +47,8 @@ model Service {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([active])
 }
 
 model PricingMultiplier {
@@ -54,6 +61,8 @@ model PricingMultiplier {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([category])
 }
 
 model AddOn {
@@ -66,6 +75,8 @@ model AddOn {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([pricingType])
 }
 
 model MarketBenchmark {
@@ -86,6 +97,9 @@ model MarketBenchmark {
   active           Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  @@index([serviceKey, status])
+  @@index([status])
 }
 
 model PricingVersion {
@@ -104,6 +118,8 @@ model PricingVersion {
   estimates             Estimate[]
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @default(now()) @updatedAt
+
+  @@index([status])
 }
 
 model Estimate {
@@ -149,6 +165,10 @@ model Estimate {
   revisions             EstimateRevision[]
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([companyName])
 }
 
 model EstimateRevision {
@@ -165,6 +185,8 @@ model EstimateRevision {
   changedBy      String
   changeReason   String
   createdAt      DateTime @default(now())
+
+  @@index([estimateId])
 }
 
 model AuditLog {
@@ -178,4 +200,7 @@ model AuditLog {
   reason    String?
   metadata  String?  // JSON
   createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity, entityId])
 }

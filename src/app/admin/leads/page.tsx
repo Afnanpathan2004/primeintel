@@ -7,13 +7,24 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { formatCurrency, formatCompactCurrency } from '@/lib/currency';
+import DatabaseErrorState from '@/components/admin/DatabaseErrorState';
 
 export const dynamic = 'force-dynamic';
 
 export default async function LeadsPage() {
-  const estimates = await prisma.estimate.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
+  let estimates: any[] = [];
+  try {
+    estimates = await prisma.estimate.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  } catch (err: any) {
+    console.error('[LeadsPage] Database query failure:', err?.message || err);
+    return (
+      <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">
+        <DatabaseErrorState />
+      </div>
+    );
+  }
 
   const totalValue = estimates.reduce((acc, curr) => acc + curr.finalPrice, 0);
   const activeCount = estimates.filter(

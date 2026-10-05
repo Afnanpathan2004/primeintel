@@ -8,26 +8,48 @@ import {
   FileSpreadsheet,
 } from 'lucide-react';
 import { formatCurrency, formatCompactCurrency, formatCurrencyRange } from '@/lib/currency';
+import DatabaseErrorState from '@/components/admin/DatabaseErrorState';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardPage() {
-  const [estimates, activeVersion, servicesCount, benchmarksCount] = await Promise.all([
-    prisma.estimate.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: 8,
-      include: {
-        pricingVersion: { select: { version: true } },
-      },
-    }),
-    prisma.pricingVersion.findFirst({
-      where: { status: 'ACTIVE' },
-    }),
-    prisma.service.count({ where: { active: true } }),
-    prisma.marketBenchmark.count({ where: { status: 'VERIFIED' } }),
-  ]);
+  let estimates: any[] = [];
+  let activeVersion: any = null;
+  let servicesCount = 0;
+  let benchmarksCount = 0;
+  let totalEstimates = 0;
+  let dbError = false;
 
-  const totalEstimates = await prisma.estimate.count();
+  try {
+    const [resEstimates, resVersion, resServices, resBenchmarks] = await Promise.all([
+      prisma.estimate.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+        include: {
+          pricingVersion: { select: { version: true } },
+        },
+      }),
+      prisma.pricingVersion.findFirst({
+        where: { status: 'ACTIVE' },
+      }),
+      prisma.service.count({ where: { active: true } }),
+      prisma.marketBenchmark.count({ where: { status: 'VERIFIED' } }),
+    ]);
+
+    estimates = resEstimates;
+    activeVersion = resVersion;
+    servicesCount = resServices;
+    benchmarksCount = resBenchmarks;
+    totalEstimates = await prisma.estimate.count();
+  } catch (err: any) {
+    console.error('[AdminDashboardPage] Database query failure:', err?.message || err);
+    dbError = true;
+  }
+
+  if (dbError) {
+    return <DatabaseErrorState />;
+  }
+
   const totalValue = estimates.reduce((acc, curr) => acc + curr.finalPrice, 0);
   const avgValue = totalEstimates > 0 ? Math.round(totalValue / totalEstimates) : 0;
   const approvedCount = estimates.filter((e) => e.status === 'APPROVED' || e.status === 'CLOSED').length;

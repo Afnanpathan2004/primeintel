@@ -1,13 +1,24 @@
 import { prisma } from '@/lib/db';
 import { History } from 'lucide-react';
+import DatabaseErrorState from '@/components/admin/DatabaseErrorState';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AuditLogsPage() {
-  const logs = await prisma.auditLog.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-  });
+  let logs: any[] = [];
+  try {
+    logs = await prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+  } catch (err: any) {
+    console.error('[AuditLogsPage] Database query failure:', err?.message || err);
+    return (
+      <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">
+        <DatabaseErrorState />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 font-sans">

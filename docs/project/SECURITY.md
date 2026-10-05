@@ -68,3 +68,13 @@ Server-side API handlers and server actions enforce authentication via `requireA
 - `.env.example` provides documentation of variable names with zero real secrets.
 - Secrets (`GEMINI_API_KEY`, `SESSION_SECRET`, `DATABASE_URL`) are injected exclusively via environment variables.
 - System diagnostics (`/api/health`) reports service health without exposing keys or credentials.
+
+---
+
+## 5. Database & Network Security (PostgreSQL)
+- **Transport Security**: All production database connections mandate TLS/SSL encryption (`sslmode=require`).
+- **Connection Isolation**: Prisma Client communicates with managed PostgreSQL via connection pooling (PgBouncer) or direct encrypted sockets.
+- **Credential Storage**: Database credentials reside exclusively in the Vercel-encrypted environment variable `DATABASE_URL` and are never logged or exposed in client bundles.
+- **Session Decoupling**: User session tokens in the `Session` table are stored as 64-byte random hex values, and expired sessions are pruned automatically.
+- **No SQLite Artifacts**: The production image contains no writable database files, preventing local filesystem tampering or deployment extraction.
+
